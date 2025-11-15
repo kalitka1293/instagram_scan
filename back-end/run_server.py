@@ -11,8 +11,11 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(os.path.dirname('asyncRequests'))
+from asyncRequests.loggingAsync import logger
 
 def main():
+    logger.debug("Запуск Теста "*5)
+    print("TEST "*10)
     print("🚀 Запуск InstardingBot API v2.0 с асинхронным парсингом...")
     print("📍 URL: http://127.0.0.1:8008")
     print("📖 Документация: http://127.0.0.1:8008/docs")
@@ -27,7 +30,7 @@ def main():
     uvicorn.run(
         "main:app",
         host="127.0.0.1",
-        port=8008,
+        port=8002,
         reload=True,
         log_level="info",
         access_log=True

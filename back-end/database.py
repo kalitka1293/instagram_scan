@@ -7,7 +7,7 @@ from config import DATABASE_URL
 engine = create_engine(
     DATABASE_URL, 
     connect_args={"check_same_thread": False},  # Только для SQLite
-    echo=True  # Логирование SQL запросов в разработке
+    echo=False  # Логирование SQL запросов в разработке
 )
 
 # Создаем фабрику сессий

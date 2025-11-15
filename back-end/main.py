@@ -372,7 +372,7 @@ async def check_profile(request: schemas.ProfileCheckRequest, db: Session = Depe
                 user_activities = generate_user_activities([], [])
             
             # Обновляем данные постов с реальными параметрами профиля
-            fresh_posts_data = generate_posts_data({
+            fresh_posts_data = await generate_posts_data({
                 "posts_count": cached_profile.posts_count or 10,
                 "followers_count": cached_profile.followers_count or 1000
             })
