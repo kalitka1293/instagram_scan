@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+#React
+/node_modules
+
 # C extensions
 *.so
 
