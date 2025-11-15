@@ -180,5 +180,5 @@ class ProxyManager:
         self._load_cache()
 
 
-db = SessionLocal()
-proxy_manager = ProxyManager(db)
+# db = SessionLocal()
+# proxy_manager = ProxyManager(db)

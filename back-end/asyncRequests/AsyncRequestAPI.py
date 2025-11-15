@@ -13,7 +13,6 @@ config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 config_path_2 = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'asyncRequests', 'loggingAsync')
 sys.path.append(os.path.dirname(config_path))
 sys.path.append(os.path.dirname(config_path_2))
-from ProxyManager import proxy_manager
 from loggingAsync import logger
 
 
@@ -240,10 +239,6 @@ class ResilientAPIClient:
         self.session = aiohttp.ClientSession(
             connector=connector,
             timeout=timeout,
-            headers={ # Скорее всего headers будем добавлять в зависимости от прокси
-                'User-Agent': 'ResilientAPIClient/1.0',
-                'Accept': 'application/json'
-            }
         )
 
         # Увеличиваем кол-во пересозданных сессий
@@ -327,7 +322,7 @@ class ResilientAPIClient:
     async def _make_single_request(
             self,
             method: str,
-            endpoint: str, # У эндпоинта убираем последний слэш
+            endpoint: str,
             **kwargs
     ) -> Union[Dict[str, Any], str, bytes]:
         """Выполнение одного HTTP запроса"""
@@ -339,16 +334,12 @@ class ResilientAPIClient:
         if not self.session or self.session.closed:
             raise RuntimeError("Session is not available")
 
-        url = endpoint.lstrip('/') # У эндпоинта убираем последний слэш
+        url = endpoint
 
         # Используем Semaphore для контроля кол-ва одновременных соединений
         async with self.global_semaphore:
             try:
-                # proxies, cookie, user_agent = proxy_manager.get_proxy_resource()
-                # print(proxy_manager.get_stats())
-                # print(proxies, kwargs)
                 async with self.session.request(method, url, **kwargs) as response:
-                    print('>>>', response.headers)
                     if response.status >= 500:
                         raise aiohttp.ClientResponseError(
                             status=response.status,
@@ -405,7 +396,6 @@ class ResilientAPIClient:
             except Exception as e:
                 logger.warning(f"!!!!!!!!! An unexpected error occurred: {e} !!!!!!")
                 raise
-
     async def _execute_parallel_requests(
             self,
             method: str,
@@ -427,7 +417,7 @@ class ResilientAPIClient:
         # Расчитываем время ожидания перед запуском первого запроса
         # Посмотреть стоит ли увеличивать таймаут или вообще вынести в отдельную переменную как таймаут для этой функции
         individual_timeout = self.request_timeout / (num_parallel + 1)
-        print("individual_timeout", individual_timeout)
+        print("individual_timeout ->", individual_timeout)
 
         tasks = []
 
@@ -459,8 +449,12 @@ class ResilientAPIClient:
                             async with self._metrics_lock:
                                 self.metrics.fastest_wins += 1
                             return result
-                        except Exception:
-                            pass # Если первый пришел с ошибок, ошибку не обрабатываем тк есть еще 2 запроса
+                        except Exception as e:
+                            if isinstance(e, aiohttp.ClientResponseError) and e.status == 401:
+                                print(f'ERROR 401: {e}')
+                                raise
+                            else:
+                                pass # Если первый пришел с ошибок, ошибку не обрабатываем тк есть еще 2 запроса
             except asyncio.TimeoutError:
                 # Если произошел таймаут так же продолжаем
                 pass
@@ -468,7 +462,7 @@ class ResilientAPIClient:
             # вычисляем оставшееся время
             elapsed_time = time.time() - first_wait_time
             remaining_time_after_first = self.request_timeout - elapsed_time
-            print("remaining_time_after_first",remaining_time_after_first)
+            print("remaining_time_after_first ->",remaining_time_after_first)
             # Проверяем осталось ли время для оставшихся запросов
             if remaining_time_after_first <= 0:
                 await self._safe_cancel_tasks(tasks)
@@ -618,6 +612,7 @@ class ResilientAPIClient:
                 self.metrics.cancelled_requests += 1
             raise
 
+
     def _calculate_parallel_requests(self) -> int:
         """Расчет количества параллельных запросов на основе нагрузки"""
         try:
@@ -676,12 +671,17 @@ class ResilientAPIClient:
             return result
 
         except Exception as e:
-            async with self._metrics_lock:
-                self.metrics.failed_requests += 1
+            #При ошибке 401 мы не обновляем сессию, так запрос успешно прошел, но ошибка авторизации
+            if isinstance(e, aiohttp.ClientResponseError):
+                if e.status == 401:
+                    pass
+            else:
+                async with self._metrics_lock:
+                    self.metrics.failed_requests += 1
 
-            # Асинхронно обновляем сессию при необходимости
-            refresh_task = asyncio.create_task(self._refresh_session(e))
-            self._track_task(refresh_task)
+                # Асинхронно обновляем сессию
+                refresh_task = asyncio.create_task(self._refresh_session(e))
+                self._track_task(refresh_task)
 
             # Детальное логирование
             if isinstance(e, aiohttp.ClientResponseError):
