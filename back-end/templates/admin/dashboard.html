@@ -1,0 +1,281 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Дашборд - Админ панель InstardingBot{% endblock %}
+
+{% block page_icon %}fas fa-tachometer-alt{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4>Обзор системы</h4>
+                <p class="text-muted mb-0">Актуальные данные обновляются в реальном времени</p>
+            </div>
+            <button class="btn btn-admin" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt"></i> Обновить
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Основные метрики -->
+<div class="row mb-4" id="main-metrics">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value" id="total-users">{{ metrics.users.total }}</div>
+                <div class="metric-label">Всего пользователей</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-arrow-up"></i> +{{ metrics.users.growth_rate }}%
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value" id="active-users">{{ metrics.users.active_today }}</div>
+                <div class="metric-label">Активные сегодня</div>
+                <div class="metric-trend">
+                    <i class="fas fa-eye"></i> {{ metrics.users.active_week }} за неделю
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value" id="total-profiles">{{ metrics.profiles.total }}</div>
+                <div class="metric-label">Профилей спаршено</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-plus"></i> +{{ metrics.profiles.parsed_today }} сегодня
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value" id="revenue-today">₽{{ "%.0f"|format(metrics.revenue.today) }}</div>
+                <div class="metric-label">Доходы сегодня</div>
+                <div class="metric-trend">
+                    <i class="fas fa-chart-line"></i> ₽{{ "%.0f"|format(metrics.revenue.month) }} за месяц
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Дополнительные метрики -->
+<div class="row mb-4">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ metrics.users.new_today }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Новых пользователей</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ metrics.subscriptions.today }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Подписок сегодня</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ metrics.subscriptions.active }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Активных подписок</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ metrics.profiles.in_progress }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">В процессе парсинга</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ "%.1f"|format(metrics.subscriptions.conversion_rate) }}%</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Конверсия в подписки</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ "%.1f"|format(metrics.profiles.completion_rate) }}%</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Успех парсинга</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики -->
+<div class="row mb-4">
+    <div class="col-lg-8 mb-3">
+        <div class="chart-container">
+            <h5><i class="fas fa-chart-area"></i> Статистика по тарифам</h5>
+            <canvas id="tariffChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-3">
+        <div class="chart-container">
+            <h5><i class="fas fa-chart-pie"></i> Статус парсинга</h5>
+            <canvas id="parsingChart" width="200" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица популярных тарифов -->
+<div class="row">
+    <div class="col-12">
+        <div class="table-container">
+            <div class="p-3 border-bottom">
+                <h5><i class="fas fa-crown"></i> Популярные тарифы</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Тариф</th>
+                            <th>Цена</th>
+                            <th>Подписок</th>
+                            <th>Доходы</th>
+                            <th>Популярность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tariff in metrics.tariffs %}
+                        <tr>
+                            <td><strong>{{ tariff.name }}</strong></td>
+                            <td>₽{{ tariff.price }}</td>
+                            <td>{{ tariff.subscriptions }}</td>
+                            <td>₽{{ "%.0f"|format(tariff.revenue) }}</td>
+                            <td>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar" style="width: {{ (tariff.subscriptions / (metrics.subscriptions.total or 1) * 100) }}%; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Данные для графиков
+    const tariffData = {{ metrics.tariffs | tojson }};
+    const parsingData = {{ metrics.parsing | tojson }};
+
+    // График тарифов
+    const tariffCtx = document.getElementById('tariffChart').getContext('2d');
+    new Chart(tariffCtx, {
+        type: 'bar',
+        data: {
+            labels: tariffData.map(t => t.name),
+            datasets: [{
+                label: 'Доходы (₽)',
+                data: tariffData.map(t => t.revenue),
+                backgroundColor: 'rgba(255, 94, 125, 0.8)',
+                borderColor: 'rgba(255, 94, 125, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+            }, {
+                label: 'Подписок',
+                data: tariffData.map(t => t.subscriptions),
+                backgroundColor: 'rgba(229, 75, 105, 0.8)',
+                borderColor: 'rgba(229, 75, 105, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // График парсинга
+    const parsingCtx = document.getElementById('parsingChart').getContext('2d');
+    new Chart(parsingCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Завершено', 'В процессе', 'Ошибки'],
+            datasets: [{
+                data: [parsingData.completed, parsingData.processing, parsingData.failed],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(220, 53, 69, 0.8)'
+                ],
+                borderWidth: 3,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+
+    // Функция обновления дашборда
+    async function refreshDashboard() {
+        try {
+            const response = await fetch('/admin/api/metrics');
+            const metrics = await response.json();
+            
+            // Обновляем основные метрики
+            document.getElementById('total-users').textContent = metrics.users.total;
+            document.getElementById('active-users').textContent = metrics.users.active_today;
+            document.getElementById('total-profiles').textContent = metrics.profiles.total;
+            document.getElementById('revenue-today').textContent = '₽' + Math.round(metrics.revenue.today);
+            
+            showNotification('Данные обновлены!', 'success');
+        } catch (error) {
+            showNotification('Ошибка обновления данных', 'danger');
+        }
+    }
+
+    // Автообновление каждые 30 секунд
+    setInterval(() => {
+        if (autoRefresh) {
+            refreshDashboard();
+        }
+    }, 30000);
+</script>
+{% endblock %}

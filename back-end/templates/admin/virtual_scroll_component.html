@@ -1,0 +1,433 @@
+<!-- Виртуальный скролл компонент для больших списков -->
+<div class="virtual-scroll-container" id="virtualScrollContainer">
+    <div class="virtual-scroll-controls mb-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="virtualSearch" 
+                           placeholder="Поиск в {{ total_records }} записях...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="virtualPageSize">
+                    <option value="50">50 на странице</option>
+                    <option value="100" selected>100 на странице</option>
+                    <option value="250">250 на странице</option>
+                    <option value="500">500 на странице</option>
+                    <option value="all">Показать все</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-end">
+                <span class="text-muted small" id="virtualInfo">
+                    Показано: <span id="virtualShown">0</span> из <span id="virtualTotal">{{ total_records }}</span>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Виртуальная таблица -->
+    <div class="table-container">
+        <div class="virtual-scroll-header">
+            <table class="table table-sm mb-0">
+                <thead id="virtualTableHeader">
+                    <!-- Заголовки будут добавлены динамически -->
+                </thead>
+            </table>
+        </div>
+        
+        <!-- Скроллируемая область -->
+        <div class="virtual-scroll-body" id="virtualTableBody" style="height: 500px; overflow-y: auto;">
+            <div class="virtual-scroll-spacer-top" id="spacerTop" style="height: 0px;"></div>
+            
+            <table class="table table-sm table-hover mb-0">
+                <tbody id="virtualRows">
+                    <!-- Строки будут добавлены динамически -->
+                </tbody>
+            </table>
+            
+            <div class="virtual-scroll-spacer-bottom" id="spacerBottom" style="height: 0px;"></div>
+            
+            <!-- Индикатор загрузки -->
+            <div class="text-center p-3" id="virtualLoading" style="display: none;">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+                <span class="ms-2">Загрузка данных...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Быстрая навигация -->
+    <div class="virtual-scroll-navigation mt-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="virtualScroll.scrollToTop()">
+                        <i class="fas fa-angle-double-up"></i> Начало
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="virtualScroll.scrollUp()">
+                        <i class="fas fa-chevron-up"></i> Вверх
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="virtualScroll.scrollDown()">
+                        <i class="fas fa-chevron-down"></i> Вниз
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="virtualScroll.scrollToBottom()">
+                        <i class="fas fa-angle-double-down"></i> Конец
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="input-group input-group-sm" style="width: 150px; margin-left: auto;">
+                    <span class="input-group-text">Перейти к строке:</span>
+                    <input type="number" class="form-control" id="jumpToRow" min="1" 
+                           max="{{ total_records }}" placeholder="№">
+                    <button class="btn btn-outline-secondary" onclick="virtualScroll.jumpToRow()">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Прогресс бар скролла -->
+        <div class="mt-2">
+            <div class="progress" style="height: 4px;">
+                <div class="progress-bar" id="scrollProgress" style="width: 0%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.virtual-scroll-container {
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.virtual-scroll-controls {
+    background: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.virtual-scroll-header {
+    background: white;
+    border-bottom: 2px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.virtual-scroll-body {
+    position: relative;
+    background: white;
+}
+
+.virtual-scroll-navigation {
+    background: #f8f9fa;
+    padding: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+.virtual-scroll-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.virtual-scroll-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.virtual-scroll-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.virtual-scroll-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Анимация строк */
+.virtual-row {
+    transition: background-color 0.2s ease;
+}
+
+.virtual-row:hover {
+    background-color: rgba(255, 94, 125, 0.1) !important;
+}
+
+.virtual-row.selected {
+    background-color: rgba(255, 94, 125, 0.2) !important;
+}
+
+/* Индикатор новых данных */
+.virtual-row.new-data {
+    animation: highlightNew 1s ease-out;
+}
+
+@keyframes highlightNew {
+    0% { background-color: rgba(40, 167, 69, 0.3); }
+    100% { background-color: transparent; }
+}
+</style>
+
+<script>
+class VirtualScrollTable {
+    constructor(containerID, options = {}) {
+        this.container = document.getElementById(containerID);
+        this.scrollBody = document.getElementById('virtualTableBody');
+        this.virtualRows = document.getElementById('virtualRows');
+        this.spacerTop = document.getElementById('spacerTop');
+        this.spacerBottom = document.getElementById('spacerBottom');
+        this.loading = document.getElementById('virtualLoading');
+        
+        // Настройки
+        this.rowHeight = options.rowHeight || 45;
+        this.pageSize = options.pageSize || 100;
+        this.visibleRows = Math.ceil(500 / this.rowHeight) + 5; // Буфер
+        this.data = [];
+        this.filteredData = [];
+        this.currentStartIndex = 0;
+        this.searchQuery = '';
+        
+        // Инициализация
+        this.init();
+    }
+    
+    init() {
+        // Обработчики событий
+        this.scrollBody.addEventListener('scroll', this.handleScroll.bind(this));
+        
+        document.getElementById('virtualSearch').addEventListener('input', (e) => {
+            this.searchQuery = e.target.value.toLowerCase();
+            this.filterData();
+        });
+        
+        document.getElementById('virtualPageSize').addEventListener('change', (e) => {
+            this.pageSize = e.target.value === 'all' ? this.data.length : parseInt(e.target.value);
+            this.updateView();
+        });
+    }
+    
+    setData(data, columns) {
+        this.data = data;
+        this.columns = columns;
+        this.filteredData = [...data];
+        this.createHeader();
+        this.updateView();
+        this.updateInfo();
+    }
+    
+    createHeader() {
+        const header = document.getElementById('virtualTableHeader');
+        header.innerHTML = `
+            <tr>
+                ${this.columns.map(col => 
+                    `<th class="sortable" data-column="${col.key}" onclick="virtualScroll.sort('${col.key}')">
+                        ${col.title} <i class="fas fa-sort ms-1"></i>
+                    </th>`
+                ).join('')}
+            </tr>
+        `;
+    }
+    
+    filterData() {
+        if (!this.searchQuery) {
+            this.filteredData = [...this.data];
+        } else {
+            this.filteredData = this.data.filter(row => {
+                return this.columns.some(col => {
+                    const value = row[col.key]?.toString().toLowerCase() || '';
+                    return value.includes(this.searchQuery);
+                });
+            });
+        }
+        this.updateView();
+        this.updateInfo();
+    }
+    
+    sort(columnKey) {
+        const column = this.columns.find(col => col.key === columnKey);
+        if (!column) return;
+        
+        // Переключаем направление сортировки
+        column.sortDirection = column.sortDirection === 'asc' ? 'desc' : 'asc';
+        
+        this.filteredData.sort((a, b) => {
+            let aVal = a[columnKey];
+            let bVal = b[columnKey];
+            
+            // Обработка разных типов данных
+            if (column.type === 'number') {
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
+            } else if (column.type === 'date') {
+                aVal = new Date(aVal);
+                bVal = new Date(bVal);
+            } else {
+                aVal = aVal?.toString().toLowerCase() || '';
+                bVal = bVal?.toString().toLowerCase() || '';
+            }
+            
+            if (aVal < bVal) return column.sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return column.sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        // Обновляем иконки сортировки
+        document.querySelectorAll('.sortable i').forEach(icon => {
+            icon.className = 'fas fa-sort ms-1';
+        });
+        
+        const icon = document.querySelector(`[data-column="${columnKey}"] i`);
+        icon.className = `fas fa-sort-${column.sortDirection === 'asc' ? 'up' : 'down'} ms-1`;
+        
+        this.updateView();
+    }
+    
+    handleScroll() {
+        const scrollTop = this.scrollBody.scrollTop;
+        const newStartIndex = Math.floor(scrollTop / this.rowHeight);
+        
+        if (newStartIndex !== this.currentStartIndex) {
+            this.currentStartIndex = newStartIndex;
+            this.renderRows();
+        }
+        
+        // Обновляем прогресс бар
+        const maxScroll = this.scrollBody.scrollHeight - this.scrollBody.clientHeight;
+        const progress = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0;
+        document.getElementById('scrollProgress').style.width = progress + '%';
+    }
+    
+    updateView() {
+        const totalHeight = this.filteredData.length * this.rowHeight;
+        this.scrollBody.style.height = '500px';
+        
+        // Обновляем высоты спейсеров
+        this.spacerTop.style.height = (this.currentStartIndex * this.rowHeight) + 'px';
+        this.spacerBottom.style.height = Math.max(0, totalHeight - (this.currentStartIndex + this.visibleRows) * this.rowHeight) + 'px';
+        
+        this.renderRows();
+    }
+    
+    renderRows() {
+        const endIndex = Math.min(this.currentStartIndex + this.visibleRows, this.filteredData.length);
+        const rows = [];
+        
+        for (let i = this.currentStartIndex; i < endIndex; i++) {
+            const row = this.filteredData[i];
+            if (!row) continue;
+            
+            const rowHTML = `
+                <tr class="virtual-row" data-index="${i}">
+                    ${this.columns.map(col => {
+                        let value = row[col.key] || '';
+                        
+                        // Форматирование по типу
+                        if (col.formatter) {
+                            value = col.formatter(value, row);
+                        } else if (col.type === 'date' && value) {
+                            value = new Date(value).toLocaleDateString('ru');
+                        } else if (col.type === 'number' && value) {
+                            value = Number(value).toLocaleString('ru');
+                        }
+                        
+                        return `<td>${value}</td>`;
+                    }).join('')}
+                </tr>
+            `;
+            rows.push(rowHTML);
+        }
+        
+        this.virtualRows.innerHTML = rows.join('');
+    }
+    
+    updateInfo() {
+        document.getElementById('virtualShown').textContent = this.filteredData.length;
+        document.getElementById('virtualTotal').textContent = this.data.length;
+    }
+    
+    // Навигационные методы
+    scrollToTop() {
+        this.scrollBody.scrollTop = 0;
+    }
+    
+    scrollToBottom() {
+        this.scrollBody.scrollTop = this.scrollBody.scrollHeight;
+    }
+    
+    scrollUp() {
+        this.scrollBody.scrollTop = Math.max(0, this.scrollBody.scrollTop - this.rowHeight * 10);
+    }
+    
+    scrollDown() {
+        this.scrollBody.scrollTop = Math.min(
+            this.scrollBody.scrollHeight - this.scrollBody.clientHeight,
+            this.scrollBody.scrollTop + this.rowHeight * 10
+        );
+    }
+    
+    jumpToRow() {
+        const rowNum = parseInt(document.getElementById('jumpToRow').value);
+        if (rowNum >= 1 && rowNum <= this.filteredData.length) {
+            const scrollTop = (rowNum - 1) * this.rowHeight;
+            this.scrollBody.scrollTop = scrollTop;
+        }
+    }
+    
+    // Добавление новых данных
+    addData(newData) {
+        this.data.push(...newData);
+        this.filterData();
+        
+        // Анимация новых строк
+        setTimeout(() => {
+            const newRows = document.querySelectorAll('.virtual-row:nth-last-child(-n+' + newData.length + ')');
+            newRows.forEach(row => row.classList.add('new-data'));
+        }, 100);
+    }
+    
+    // Обновление существующих данных
+    updateData(updatedData) {
+        this.data = updatedData;
+        this.filterData();
+    }
+    
+    // Получение выбранных строк
+    getSelectedRows() {
+        const selected = [];
+        document.querySelectorAll('.virtual-row.selected').forEach(row => {
+            const index = parseInt(row.dataset.index);
+            selected.push(this.filteredData[index]);
+        });
+        return selected;
+    }
+    
+    // Показать индикатор загрузки
+    showLoading() {
+        this.loading.style.display = 'block';
+    }
+    
+    hideLoading() {
+        this.loading.style.display = 'none';
+    }
+}
+
+// Глобальный экземпляр
+let virtualScroll;
+
+// Инициализация виртуального скролла
+function initVirtualScroll(data, columns) {
+    virtualScroll = new VirtualScrollTable('virtualScrollContainer', {
+        rowHeight: 45,
+        pageSize: 100
+    });
+    
+    virtualScroll.setData(data, columns);
+    return virtualScroll;
+}
+</script>
+
+
+

@@ -1,0 +1,196 @@
+.tariff-management-screen {
+  background: linear-gradient(135deg, #FF5E7D, #E54B69);
+  color: white;
+  min-height: calc(100vh - 100px);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Логотип */
+.app-logo {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 8px 12px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.2),
+    0 0 15px rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.logo-image {
+  height: 35px;
+  width: auto;
+  display: block;
+}
+
+.tariff-management-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255, 94, 125, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  animation: backgroundFloat 12s ease-in-out infinite alternate;
+}
+
+/* Контент */
+.tariff-content {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+}
+
+.management-text {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  line-height: 1.5;
+  text-align: left;
+  margin-bottom: 40px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  flex: 1;
+}
+
+.management-text .link {
+  color: #87ceeb;
+  text-decoration: underline;
+  transition: opacity 0.3s ease;
+}
+
+.management-text .link:hover {
+  opacity: 0.8;
+}
+
+/* Стиль для ссылки заявления */
+.application-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.application-link:hover {
+  text-decoration-color: rgba(255, 255, 255, 0.8);
+  opacity: 0.9;
+}
+
+/* Кнопки действий */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.action-button {
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  padding: 16px 24px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: none;
+  letter-spacing: 0.3px;
+}
+
+/* Кнопка приостановки - выделенная */
+.pause-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.pause-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Кнопка восстановления */
+.restore-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Кнопка поддержки с подчеркиванием */
+.support-text {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+}
+
+.support-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.support-btn:hover .support-text {
+  text-decoration-color: rgba(255, 255, 255, 0.6);
+}
+
+.action-button:active {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Telegram handle */
+.telegram-handle {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-top: auto;
+  padding-top: 20px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Анимации */
+@keyframes backgroundFloat {
+  from {
+    transform: translateY(0px) rotate(0deg);
+  }
+  to {
+    transform: translateY(-20px) rotate(1deg);
+  }
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+  .tariff-content {
+    padding: 15px;
+  }
+  
+  .management-text {
+    font-size: 13px;
+    margin-bottom: 30px;
+  }
+  
+  .action-button {
+    font-size: 15px;
+    padding: 16px 25px;
+  }
+  
+  .action-buttons {
+    gap: 12px;
+  }
+}

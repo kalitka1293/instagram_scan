@@ -1,0 +1,412 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Статистика подписок - Админ панель{% endblock %}
+
+{% block page_icon %}fas fa-credit-card{% endblock %}
+
+{% block content %}
+<!-- Общая статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ subscription_stats.total }}</div>
+                <div class="metric-label">Всего подписок</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-percentage"></i> {{ "%.1f"|format(subscription_stats.conversion_rate) }}% конверсия
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ subscription_stats.active }}</div>
+                <div class="metric-label">Активных</div>
+                <div class="metric-trend">
+                    <i class="fas fa-chart-line"></i> {{ "%.1f"|format((subscription_stats.active / (subscription_stats.total or 1)) * 100) }}% от общих
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ subscription_stats.paused }}</div>
+                <div class="metric-label">Приостановлено</div>
+                <div class="metric-trend trend-down">
+                    <i class="fas fa-pause"></i> {{ subscription_stats.cancelled }} отменено
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">₽{{ "%.0f"|format(revenue_stats|sum(attribute="total_revenue")) }}</div>
+                <div class="metric-label">Общий доход</div>
+                <div class="metric-trend trend-up">
+                    <i class="fas fa-ruble-sign"></i> {{ revenue_stats|sum(attribute="payment_count") }} платежей
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <h5><i class="fas fa-chart-bar"></i> Доходы по тарифам</h5>
+            <canvas id="revenueChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="chart-container">
+            <h5><i class="fas fa-chart-pie"></i> Распределение подписок</h5>
+            <canvas id="subscriptionChart" width="200" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Детальная статистика по тарифам -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="table-container">
+            <div class="p-3 border-bottom">
+                <h5><i class="fas fa-crown"></i> Производительность тарифов</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Тариф</th>
+                            <th>Цена</th>
+                            <th>Всего подписок</th>
+                            <th>Активных</th>
+                            <th>Общий доход</th>
+                            <th>Средний платеж</th>
+                            <th>Популярность</th>
+                            <th>Эффективность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tariff in tariff_stats %}
+                        <tr>
+                            <td>
+                                <strong>{{ tariff.name }}</strong>
+                                <br>
+                                <small class="text-muted">₽{{ tariff.price }} за {{ tariff.duration_days or tariff.requests_count }} {{ 'дней' if tariff.duration_days else 'запросов' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">₽{{ tariff.price }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ tariff.total_subscriptions or 0 }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">{{ tariff.active_subscriptions or 0 }}</span>
+                                {% if tariff.total_subscriptions %}
+                                <br>
+                                <small class="text-muted">{{ "%.1f"|format((tariff.active_subscriptions or 0) / tariff.total_subscriptions * 100) }}%</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set tariff_revenue = revenue_stats|selectattr("name", "equalto", tariff.name)|first %}
+                                <strong>₽{{ "%.0f"|format(tariff_revenue.total_revenue if tariff_revenue else 0) }}</strong>
+                            </td>
+                            <td>
+                                {% if tariff_revenue %}
+                                ₽{{ "%.0f"|format(tariff_revenue.avg_payment) }}
+                                <br>
+                                <small class="text-muted">{{ tariff_revenue.payment_count }} платежей</small>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-info" 
+                                         style="width: {{ ((tariff.total_subscriptions or 0) / (subscription_stats.total or 1) * 100) }}%;">
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ "%.1f"|format((tariff.total_subscriptions or 0) / (subscription_stats.total or 1) * 100) }}%</small>
+                            </td>
+                            <td>
+                                {% set efficiency = ((tariff_revenue.total_revenue if tariff_revenue else 0) / ((tariff.total_subscriptions or 1) * tariff.price)) * 100 %}
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar 
+                                        {% if efficiency >= 80 %}bg-success
+                                        {% elif efficiency >= 50 %}bg-warning  
+                                        {% else %}bg-danger{% endif %}" 
+                                         style="width: {{ efficiency if efficiency <= 100 else 100 }}%;">
+                                    </div>
+                                </div>
+                                <small class="
+                                    {% if efficiency >= 80 %}text-success
+                                    {% elif efficiency >= 50 %}text-warning
+                                    {% else %}text-danger{% endif %}">
+                                    {{ "%.1f"|format(efficiency) }}%
+                                </small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        
+                        {% if not tariff_stats %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-chart-bar fa-3x mb-3 d-block"></i>
+                                Статистика по тарифам отсутствует
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Разбивка по тарифам -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="table-container">
+            <div class="p-3 border-bottom">
+                <h5><i class="fas fa-list"></i> Подписки по тарифам</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Тариф</th>
+                            <th>Количество</th>
+                            <th>Доля</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in subscription_stats.tariff_breakdown %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td>{{ item.count }}</td>
+                            <td>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar" 
+                                         style="width: {{ (item.count / (subscription_stats.total or 1)) * 100 }}%; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));">
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ "%.1f"|format((item.count / (subscription_stats.total or 1)) * 100) }}%</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="table-container">
+            <div class="p-3 border-bottom">
+                <h5><i class="fas fa-money-bill-wave"></i> Доходы по тарифам</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Тариф</th>
+                            <th>Доход</th>
+                            <th>Доля</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in revenue_stats %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td>₽{{ "%.0f"|format(item.total_revenue) }}</td>
+                            <td>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: {{ (item.total_revenue / (revenue_stats|sum(attribute="total_revenue") or 1)) * 100 }}%;">
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ "%.1f"|format((item.total_revenue / (revenue_stats|sum(attribute="total_revenue") or 1)) * 100) }}%</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика по дням недели и времени -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="chart-container">
+            <h5><i class="fas fa-calendar-alt"></i> Активность подписок по времени</h5>
+            <p class="text-muted mb-3">График показывает когда пользователи чаще всего оформляют подписки</p>
+            <canvas id="timeChart" width="400" height="150"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Данные для графиков
+    const revenueData = {{ revenue_stats | tojson }};
+    const subscriptionData = {{ subscription_stats.tariff_breakdown | tojson }};
+
+    // График доходов
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revenueCtx, {
+        type: 'bar',
+        data: {
+            labels: revenueData.map(item => item.name),
+            datasets: [{
+                label: 'Общий доход (₽)',
+                data: revenueData.map(item => item.total_revenue),
+                backgroundColor: 'rgba(255, 94, 125, 0.8)',
+                borderColor: 'rgba(255, 94, 125, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+            }, {
+                label: 'Количество платежей',
+                data: revenueData.map(item => item.payment_count),
+                backgroundColor: 'rgba(229, 75, 105, 0.8)',
+                borderColor: 'rgba(229, 75, 105, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                yAxisID: 'y1',
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Доход (₽)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Количество платежей'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+
+    // График распределения подписок
+    const subscriptionCtx = document.getElementById('subscriptionChart').getContext('2d');
+    new Chart(subscriptionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: subscriptionData.map(item => item.name),
+            datasets: [{
+                data: subscriptionData.map(item => item.count),
+                backgroundColor: [
+                    'rgba(255, 94, 125, 0.8)',
+                    'rgba(229, 75, 105, 0.8)',
+                    'rgba(255, 159, 177, 0.8)',
+                    'rgba(204, 51, 85, 0.8)',
+                    'rgba(255, 192, 203, 0.8)',
+                    'rgba(178, 34, 68, 0.8)',
+                    'rgba(255, 20, 147, 0.8)'
+                ],
+                borderWidth: 3,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+
+    // График активности по времени (моковые данные)
+    const timeCtx = document.getElementById('timeChart').getContext('2d');
+    const timeData = {
+        labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+        datasets: [{
+            label: 'Подписки',
+            data: [2, 1, 3, 8, 15, 12, 18, 10], // Моковые данные
+            borderColor: 'rgba(255, 94, 125, 1)',
+            backgroundColor: 'rgba(255, 94, 125, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+
+    new Chart(timeCtx, {
+        type: 'line',
+        data: timeData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Количество подписок'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Время суток'
+                    }
+                }
+            }
+        }
+    });
+
+    // Функция обновления данных
+    async function refreshSubscriptionStats() {
+        try {
+            // Здесь можно добавить API для получения свежих данных
+            showNotification('Данные обновлены!', 'success');
+        } catch (error) {
+            showNotification('Ошибка обновления данных', 'danger');
+        }
+    }
+
+    // Автообновление каждые 5 минут
+    setInterval(() => {
+        if (autoRefresh) {
+            refreshSubscriptionStats();
+        }
+    }, 300000);
+</script>
+{% endblock %}
+
+
+

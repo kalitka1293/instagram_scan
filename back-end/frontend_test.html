@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstardingBot API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #FF5E7D, #E54B69);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+        }
+        button {
+            background: #FF5E7D;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #E54B69;
+            transform: translateY(-2px);
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .section {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        h2 {
+            margin-top: 0;
+            color: #FFE4E8;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 InstardingBot API Тестирование</h1>
+    
+    <!-- Авторизация -->
+    <div class="section">
+        <h2>🔐 Авторизация</h2>
+        <div class="container">
+            <div class="input-group">
+                <label for="userId">User ID:</label>
+                <input type="text" id="userId" placeholder="Введите ваш user_id" value="test_user_123">
+            </div>
+            <button onclick="login()">Войти / Зарегистрироваться</button>
+            <button onclick="getUserInfo()">Получить информацию о пользователе</button>
+            <div id="authResult" class="result"></div>
+        </div>
+    </div>
+
+    <!-- Проверка профиля -->
+    <div class="section">
+        <h2>🔍 Проверка Instagram профиля</h2>
+        <div class="container">
+            <div class="input-group">
+                <label for="username">Instagram Username:</label>
+                <input type="text" id="username" placeholder="Введите username без @" value="artrurtech">
+            </div>
+            <button onclick="checkProfile()">Проверить профиль</button>
+            <button onclick="getAnalytics()">Получить аналитику</button>
+            <button onclick="getStats()">Получить статистику</button>
+            <div id="profileResult" class="result"></div>
+        </div>
+    </div>
+
+    <!-- Тарифы -->
+    <div class="section">
+        <h2>💰 Тарифы и подписки</h2>
+        <div class="container">
+            <button onclick="getTariffs()">Получить тарифы</button>
+            <div class="input-group">
+                <label for="tariffId">ID тарифа для покупки:</label>
+                <select id="tariffId">
+                    <option value="1">Демо (19₽)</option>
+                    <option value="2">Эко (249₽)</option>
+                    <option value="3">Суточный (499₽)</option>
+                    <option value="4">Эксклюзив (999₽)</option>
+                </select>
+            </div>
+            <button onclick="purchaseSubscription()">Купить подписку</button>
+            <button onclick="getSubscriptionStatus()">Статус подписки</button>
+            <button onclick="pauseSubscription()">Приостановить подписку</button>
+            <div id="subscriptionResult" class="result"></div>
+        </div>
+    </div>
+
+    <!-- Поддержка -->
+    <div class="section">
+        <h2>💬 Поддержка</h2>
+        <div class="container">
+            <div class="input-group">
+                <label for="supportSubject">Тема обращения:</label>
+                <input type="text" id="supportSubject" placeholder="Тема" value="Тестовое обращение">
+            </div>
+            <div class="input-group">
+                <label for="supportMessage">Сообщение:</label>
+                <textarea id="supportMessage" rows="3" placeholder="Ваше сообщение">Это тестовое обращение в службу поддержки</textarea>
+            </div>
+            <button onclick="contactSupport()">Отправить обращение</button>
+            <div id="supportResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        
+        function getCurrentUserId() {
+            return document.getElementById('userId').value || 'test_user_123';
+        }
+        
+        function displayResult(elementId, data) {
+            document.getElementById(elementId).textContent = JSON.stringify(data, null, 2);
+        }
+        
+        async function apiCall(method, endpoint, data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(API_BASE + endpoint, options);
+                return await response.json();
+            } catch (error) {
+                return { error: error.message };
+            }
+        }
+        
+        // Авторизация
+        async function login() {
+            const userId = getCurrentUserId();
+            const result = await apiCall('POST', '/api/auth/login', { user_id: userId });
+            displayResult('authResult', result);
+        }
+        
+        async function getUserInfo() {
+            const userId = getCurrentUserId();
+            const result = await apiCall('GET', `/api/auth/user/${userId}`);
+            displayResult('authResult', result);
+        }
+        
+        // Профили
+        async function checkProfile() {
+            const username = document.getElementById('username').value;
+            const userId = getCurrentUserId();
+            const result = await apiCall('POST', '/api/profile/check', {
+                username: username,
+                user_id: userId
+            });
+            displayResult('profileResult', result);
+        }
+        
+        async function getAnalytics() {
+            const username = document.getElementById('username').value;
+            const result = await apiCall('GET', `/api/profile/${username}/analytics`);
+            displayResult('profileResult', result);
+        }
+        
+        async function getStats() {
+            const username = document.getElementById('username').value;
+            const result = await apiCall('GET', `/api/profile/${username}/stats`);
+            displayResult('profileResult', result);
+        }
+        
+        // Тарифы и подписки
+        async function getTariffs() {
+            const result = await apiCall('GET', '/api/tariffs');
+            displayResult('subscriptionResult', result);
+        }
+        
+        async function purchaseSubscription() {
+            const userId = getCurrentUserId();
+            const tariffId = parseInt(document.getElementById('tariffId').value);
+            const result = await apiCall('POST', '/api/subscription/purchase', {
+                user_id: userId,
+                tariff_id: tariffId
+            });
+            displayResult('subscriptionResult', result);
+        }
+        
+        async function getSubscriptionStatus() {
+            const userId = getCurrentUserId();
+            const result = await apiCall('GET', `/api/subscription/status/${userId}`);
+            displayResult('subscriptionResult', result);
+        }
+        
+        async function pauseSubscription() {
+            const userId = getCurrentUserId();
+            const result = await apiCall('POST', '/api/subscription/pause', {
+                user_id: userId
+            });
+            displayResult('subscriptionResult', result);
+        }
+        
+        // Поддержка
+        async function contactSupport() {
+            const userId = getCurrentUserId();
+            const subject = document.getElementById('supportSubject').value;
+            const message = document.getElementById('supportMessage').value;
+            
+            const result = await apiCall('POST', '/api/support/contact', {
+                user_id: userId,
+                subject: subject,
+                message: message
+            });
+            displayResult('supportResult', result);
+        }
+        
+        // Автоматическая авторизация при загрузке
+        window.onload = function() {
+            login();
+        };
+    </script>
+</body>
+</html>

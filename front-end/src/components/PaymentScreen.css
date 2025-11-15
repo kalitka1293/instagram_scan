@@ -1,0 +1,559 @@
+.payment-screen {
+  background: linear-gradient(135deg, #FF5E7D, #E54B69);
+  color: white;
+  min-height: calc(100vh - 100px);
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.payment-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255, 94, 125, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  animation: backgroundFloat 12s ease-in-out infinite alternate;
+}
+
+/* Логотип */
+.app-logo {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 8px 12px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.2),
+    0 0 15px rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.logo-image {
+  height: 35px;
+  width: auto;
+  display: block;
+}
+
+/* Кнопка назад */
+.back-button {
+  position: relative;
+  z-index: 10;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.1)
+  );
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  color: white;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.back-button:hover {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.2)
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Заголовок */
+.payment-header {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.payment-title {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  background: linear-gradient(45deg, #fff, rgba(255, 255, 255, 0.8));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.payment-subtitle {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  margin: 0 0 16px 0;
+  padding: 0 20px;
+}
+
+.selected-plan-info {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.05)
+  );
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  margin: 0 auto 20px auto;
+  max-width: 250px;
+}
+
+.plan-price {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  margin-bottom: 4px;
+}
+
+.plan-duration {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Контейнер тарифов */
+.tariffs-container {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 20px;
+}
+
+.tariffs-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 12px 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tariffs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Карточки тарифов */
+.tariff-card {
+  min-width: 140px;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.05)
+  );
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: slideUp 0.5s ease-out;
+}
+
+.tariff-card:hover {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.1)
+  );
+  transform: translateY(-2px);
+}
+
+.tariff-card.selected {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.2)
+  );
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.tariff-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tariff-name {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.tariff-price {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+.tariff-duration {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Секция преимуществ */
+.features-section {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 20px;
+}
+
+.features-title {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 12px 0;
+  text-align: center;
+}
+
+.features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feature-item {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.05)
+  );
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.1)
+  );
+  transform: translateY(-1px);
+}
+
+.feature-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  filter: brightness(0) invert(1);
+  margin-top: 2px;
+}
+
+.feature-text {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* Кнопка оплаты */
+.payment-button {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  background: linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.9));
+  color: #FF5E7D;
+  border: none;
+  border-radius: 18px;
+  padding: 14px 28px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 0 20px rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  margin-bottom: 16px;
+}
+
+.payment-button:hover:not(.processing) {
+  background: linear-gradient(135deg, #fff, #f8f8f8);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.2),
+    0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+.payment-button.processing {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.6));
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.payment-button:active:not(.processing) {
+  transform: translateY(0);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.15),
+    0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+/* Секция согласий */
+.agreements-section {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 20px;
+}
+
+.agreement-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.agreement-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.agreement-checkbox:checked {
+  background: white;
+  border-color: white;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+.agreement-checkbox:checked::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #FF5E7D;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.agreement-checkbox:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+/* Текст согласия */
+.agreement-text {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.3;
+  flex: 1;
+  cursor: pointer;
+}
+
+.agreement-link {
+  color: white;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.agreement-link:hover {
+  opacity: 0.8;
+}
+
+/* Платежные системы */
+.payment-systems {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.payment-logo {
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  backdrop-filter: blur(10px);
+}
+
+.payment-logo.visa {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1A1F71;
+}
+
+.payment-logo.mir {
+  background: rgba(0, 150, 136, 0.9);
+  color: white;
+}
+
+.payment-logo.mastercard {
+  background: rgba(235, 0, 27, 0.9);
+  color: white;
+}
+
+.payment-provider {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Анимации */
+@keyframes backgroundFloat {
+  0% { transform: translateX(-3px) translateY(-4px); }
+  100% { transform: translateX(3px) translateY(4px); }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .payment-screen {
+    padding: 12px;
+  }
+  
+  .payment-title {
+    font-size: 24px;
+  }
+  
+  .payment-subtitle {
+    font-size: 13px;
+    padding: 0 10px;
+  }
+  
+  .tariff-card {
+    min-width: 120px;
+  }
+  
+  .tariff-name {
+    font-size: 14px;
+  }
+  
+  .tariff-price {
+    font-size: 18px;
+  }
+  
+  .features-title {
+    font-size: 16px;
+  }
+  
+  .feature-text {
+    font-size: 12px;
+  }
+  
+  .payment-button {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+  
+  .payment-systems {
+    gap: 12px;
+  }
+  
+  .payment-logo {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-logo {
+    top: 15px;
+    left: 15px;
+    padding: 6px 10px;
+    border-radius: 12px;
+  }
+  
+  .logo-image {
+    height: 25px;
+  }
+  
+  .payment-title {
+    font-size: 22px;
+  }
+  
+  .tariff-card {
+    min-width: 110px;
+  }
+  
+  .tariff-name {
+    font-size: 13px;
+  }
+  
+  .tariff-price {
+    font-size: 16px;
+  }
+  
+  .tariff-duration {
+    font-size: 10px;
+  }
+  
+  .feature-icon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .feature-text {
+    font-size: 14px;
+  }
+  
+  .agreement-text {
+    font-size: 10px;
+  }
+}

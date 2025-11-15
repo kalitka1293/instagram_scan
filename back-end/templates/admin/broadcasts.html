@@ -1,0 +1,450 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Telegram рассылки - Админ панель{% endblock %}
+
+{% block page_icon %}fas fa-paper-plane{% endblock %}
+
+{% block content %}
+<!-- Статистика рассылок -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ broadcast_stats.total_sent or 0 }}</div>
+                <div class="metric-label">Всего отправлено</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ broadcast_stats.today_sent or 0 }}</div>
+                <div class="metric-label">Отправлено сегодня</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ broadcast_stats.success_rate or 0 }}%</div>
+                <div class="metric-label">Успешность доставки</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ user_stats.total_users or 0 }}</div>
+                <div class="metric-label">Всего пользователей</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Создание новой рассылки -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus-circle"></i> Создать рассылку</h5>
+            </div>
+            <div class="card-body">
+                <form id="broadcastForm">
+                    <div class="row">
+                        <!-- Настройки аудитории -->
+                        <div class="col-lg-4">
+                            <h6><i class="fas fa-users"></i> Аудитория</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Кому отправить:</label>
+                                <select class="form-select" id="targetCriteria" onchange="updateUserCount()">
+                                    <option value="all">Всем пользователям ({{ user_stats.total_users or 0 }})</option>
+                                    <option value="paid">Только платным ({{ user_stats.paid_users or 0 }})</option>
+                                    <option value="free">Только бесплатным ({{ user_stats.free_users or 0 }})</option>
+                                    <option value="selected">Выбранным пользователям</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3" id="selectedUsersBlock" style="display: none;">
+                                <label class="form-label">Выберите пользователей:</label>
+                                <select class="form-select" id="selectedUsers" multiple size="8">
+                                    <!-- Пользователи будут загружены через AJAX -->
+                                </select>
+                                <small class="text-muted">Удерживайте Ctrl для множественного выбора</small>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <strong>Будет отправлено:</strong> <span id="recipientCount">{{ user_stats.total_users or 0 }}</span> пользователям
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Задержка между отправками:</label>
+                                <select class="form-select" id="delaySeconds">
+                                    <option value="0.1">0.1 сек (быстро)</option>
+                                    <option value="0.5" selected>0.5 сек (рекомендуется)</option>
+                                    <option value="1">1 сек (медленно)</option>
+                                    <option value="2">2 сек (очень медленно)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Содержимое сообщения -->
+                        <div class="col-lg-8">
+                            <h6><i class="fas fa-edit"></i> Содержимое</h6>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Текст сообщения:</label>
+                                <textarea class="form-control" id="messageText" rows="6" 
+                                         placeholder="Введите текст сообщения...&#10;&#10;Поддерживается HTML разметка:&#10;<b>жирный</b>, <i>курсив</i>, <u>подчеркнутый</u>&#10;<a href='https://example.com'>ссылка</a>"></textarea>
+                                <small class="text-muted">HTML теги: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;a&gt;, &lt;code&gt;, &lt;pre&gt;</small>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Фото (URL):</label>
+                                        <input type="url" class="form-control" id="photoUrl" 
+                                               placeholder="https://example.com/image.jpg">
+                                        <small class="text-muted">Прямая ссылка на изображение</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Видео (URL):</label>
+                                        <input type="url" class="form-control" id="videoUrl" 
+                                               placeholder="https://example.com/video.mp4">
+                                        <small class="text-muted">Прямая ссылка на видео</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Текст кнопки:</label>
+                                        <input type="text" class="form-control" id="buttonText" 
+                                               placeholder="Например: Открыть сайт">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Ссылка кнопки:</label>
+                                        <input type="url" class="form-control" id="buttonUrl" 
+                                               placeholder="https://example.com">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Предварительный просмотр:</h6>
+                                <div class="card bg-light" id="messagePreview" style="max-width: 400px;">
+                                    <div class="card-body">
+                                        <div id="previewContent">
+                                            <p class="text-muted">Введите текст для предварительного просмотра</p>
+                                        </div>
+                                        <div id="previewButton" style="display: none;">
+                                            <button class="btn btn-primary btn-sm">
+                                                <i class="fas fa-external-link-alt"></i> <span id="previewButtonText">Кнопка</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="button" class="btn btn-outline-secondary me-2" onclick="previewMessage()">
+                            <i class="fas fa-eye"></i> Предварительный просмотр
+                        </button>
+                        <button type="submit" class="btn btn-admin btn-lg" id="sendButton">
+                            <i class="fas fa-paper-plane"></i> Запустить рассылку
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- История рассылок -->
+<div class="row">
+    <div class="col-12">
+        <div class="table-container">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-history"></i> История рассылок</h5>
+                <button class="btn btn-outline-success btn-sm" onclick="refreshHistory()">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0" id="broadcastHistory">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Аудитория</th>
+                            <th>Отправлено</th>
+                            <th>Успешно</th>
+                            <th>Ошибки</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-paper-plane fa-3x mb-3 d-block"></i>
+                                История рассылок пуста. Создайте первую рассылку!
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно прогресса рассылки -->
+<div class="modal fade" id="broadcastProgressModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-paper-plane"></i> Рассылка в процессе</h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Отправка...</span>
+                    </div>
+                </div>
+                <p>Отправка сообщений...</p>
+                <div class="progress mb-3">
+                    <div class="progress-bar" id="broadcastProgress" role="progressbar" 
+                         style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                <p class="text-muted" id="progressText">Подготовка к отправке...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cancelBroadcast()" disabled id="cancelButton">
+                    Отменить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedUsersList = [];
+    let broadcastInProgress = false;
+    
+    // Обновление счетчика пользователей
+    function updateUserCount() {
+        const criteria = document.getElementById('targetCriteria').value;
+        const selectedBlock = document.getElementById('selectedUsersBlock');
+        const recipientCount = document.getElementById('recipientCount');
+        
+        if (criteria === 'selected') {
+            selectedBlock.style.display = 'block';
+            loadUsersList();
+            recipientCount.textContent = '0 (выберите пользователей)';
+        } else {
+            selectedBlock.style.display = 'none';
+            
+            const counts = {
+                'all': {{ user_stats.total_users or 0 }},
+                'paid': {{ user_stats.paid_users or 0 }},
+                'free': {{ user_stats.free_users or 0 }}
+            };
+            
+            recipientCount.textContent = counts[criteria] || 0;
+        }
+    }
+    
+    // Загрузка списка пользователей
+    async function loadUsersList() {
+        try {
+            const response = await fetch('/admin/api/users/list');
+            const users = await response.json();
+            
+            const select = document.getElementById('selectedUsers');
+            select.innerHTML = '';
+            
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.user_id;
+                option.textContent = `${user.display_name} (${user.profiles_count} запросов)`;
+                if (user.has_subscription) {
+                    option.textContent += ' 💎'; // Добавляем иконку для платных пользователей
+                }
+                select.appendChild(option);
+            });
+            
+            // Обработчик изменения выбора
+            select.addEventListener('change', function() {
+                const selected = Array.from(this.selectedOptions).map(opt => opt.value);
+                document.getElementById('recipientCount').textContent = selected.length;
+            });
+            
+        } catch (error) {
+            showNotification('Ошибка загрузки пользователей', 'danger');
+        }
+    }
+    
+    // Предварительный просмотр сообщения
+    function previewMessage() {
+        const text = document.getElementById('messageText').value;
+        const photoUrl = document.getElementById('photoUrl').value;
+        const videoUrl = document.getElementById('videoUrl').value;
+        const buttonText = document.getElementById('buttonText').value;
+        const buttonUrl = document.getElementById('buttonUrl').value;
+        
+        const previewContent = document.getElementById('previewContent');
+        const previewButton = document.getElementById('previewButton');
+        const previewButtonText = document.getElementById('previewButtonText');
+        
+        // Показываем фото/видео
+        let content = '';
+        if (photoUrl) {
+            content += `<img src="${photoUrl}" class="img-fluid mb-2" style="max-height: 200px;">`;
+        }
+        if (videoUrl) {
+            content += `<video controls class="img-fluid mb-2" style="max-height: 200px;"><source src="${videoUrl}"></video>`;
+        }
+        
+        // Показываем текст
+        if (text) {
+            content += `<p>${text.replace(/\n/g, '<br>')}</p>`;
+        }
+        
+        previewContent.innerHTML = content || '<p class="text-muted">Текст не введен</p>';
+        
+        // Показываем кнопку
+        if (buttonText && buttonUrl) {
+            previewButtonText.textContent = buttonText;
+            previewButton.style.display = 'block';
+        } else {
+            previewButton.style.display = 'none';
+        }
+    }
+    
+    // Автообновление предварительного просмотра
+    document.getElementById('messageText').addEventListener('input', previewMessage);
+    document.getElementById('photoUrl').addEventListener('input', previewMessage);
+    document.getElementById('videoUrl').addEventListener('input', previewMessage);
+    document.getElementById('buttonText').addEventListener('input', previewMessage);
+    document.getElementById('buttonUrl').addEventListener('input', previewMessage);
+    
+    // Отправка рассылки
+    document.getElementById('broadcastForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (broadcastInProgress) {
+            showNotification('Рассылка уже выполняется', 'warning');
+            return;
+        }
+        
+        const criteria = document.getElementById('targetCriteria').value;
+        const selectedUsers = criteria === 'selected' ? 
+            Array.from(document.getElementById('selectedUsers').selectedOptions).map(opt => opt.value) : [];
+        
+        const broadcastData = {
+            target_criteria: criteria,
+            selected_users: selectedUsers,
+            text: document.getElementById('messageText').value,
+            photo_url: document.getElementById('photoUrl').value,
+            video_url: document.getElementById('videoUrl').value,
+            button_text: document.getElementById('buttonText').value,
+            button_url: document.getElementById('buttonUrl').value,
+            delay_seconds: parseFloat(document.getElementById('delaySeconds').value)
+        };
+        
+        // Валидация
+        if (!broadcastData.text && !broadcastData.photo_url && !broadcastData.video_url) {
+            showNotification('Необходимо указать текст, фото или видео', 'warning');
+            return;
+        }
+        
+        if (criteria === 'selected' && selectedUsers.length === 0) {
+            showNotification('Выберите хотя бы одного пользователя', 'warning');
+            return;
+        }
+        
+        // Подтверждение
+        const recipientCount = document.getElementById('recipientCount').textContent.split(' ')[0];
+        if (!confirm(`Вы уверены, что хотите отправить рассылку ${recipientCount} пользователям?`)) {
+            return;
+        }
+        
+        // Запуск рассылки
+        broadcastInProgress = true;
+        document.getElementById('sendButton').disabled = true;
+        
+        const progressModal = new bootstrap.Modal(document.getElementById('broadcastProgressModal'));
+        progressModal.show();
+        
+        try {
+            const response = await fetch('/admin/broadcasts/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(broadcastData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Показываем результаты
+                const results = result.results;
+                document.getElementById('progressText').innerHTML = `
+                    <strong>Рассылка завершена!</strong><br>
+                    Успешно: ${results.success}<br>
+                    Ошибок: ${results.failed}<br>
+                    Всего: ${results.total}
+                `;
+                
+                document.getElementById('broadcastProgress').style.width = '100%';
+                document.getElementById('broadcastProgress').textContent = '100%';
+                document.getElementById('cancelButton').textContent = 'Закрыть';
+                document.getElementById('cancelButton').disabled = false;
+                
+                showNotification(`Рассылка завершена! Успешно: ${results.success}, Ошибок: ${results.failed}`, 'success');
+                
+                // Очищаем форму
+                document.getElementById('broadcastForm').reset();
+                updateUserCount();
+                previewMessage();
+                
+            } else {
+                throw new Error(result.error || 'Неизвестная ошибка');
+            }
+            
+        } catch (error) {
+            showNotification('Ошибка отправки рассылки: ' + error.message, 'danger');
+            progressModal.hide();
+        } finally {
+            broadcastInProgress = false;
+            document.getElementById('sendButton').disabled = false;
+        }
+    });
+    
+    // Отмена рассылки
+    function cancelBroadcast() {
+        bootstrap.Modal.getInstance(document.getElementById('broadcastProgressModal')).hide();
+    }
+    
+    // Обновление истории
+    function refreshHistory() {
+        // В реальной реализации здесь будет загрузка истории рассылок
+        showNotification('История обновлена', 'info');
+    }
+    
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        updateUserCount();
+        previewMessage();
+    });
+</script>
+{% endblock %}

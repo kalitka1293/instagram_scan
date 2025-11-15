@@ -1,0 +1,242 @@
+.profile-check-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(135deg, #FF5E7D, #E54B69);
+  position: relative;
+  overflow: hidden;
+}
+.app-logo {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 8px 12px;
+  box-shadow:
+          0 4px 20px rgba(0, 0, 0, 0.2),
+          0 0 15px rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+.profile-check-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 30% 40%, rgba(255, 94, 125, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  animation: backgroundFloat 6s ease-in-out infinite alternate;
+}
+
+.content {
+  width: 100%;
+  max-width: 320px;
+  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 16px;
+  text-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 0 25px rgba(255, 255, 255, 0.3);
+  animation: titleGlow 3s ease-in-out infinite alternate;
+}
+
+.subtitle {
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 40px;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.input-container {
+  margin-bottom: 36px;
+  position: relative;
+}
+
+.input-container::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 20px;
+  background: linear-gradient(45deg, 
+    rgba(255, 94, 125, 0.4), 
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 94, 125, 0.4)
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  filter: blur(8px);
+}
+
+.input-container:focus-within::before {
+  opacity: 1;
+  animation: inputGlow 2s ease-in-out infinite alternate;
+}
+
+.profile-input {
+  width: 100%;
+  padding: 18px 24px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.9)
+  );
+  font-size: 18px;
+  text-align: center;
+  color: #333333;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+}
+
+.profile-input:focus {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 1), 
+    rgba(255, 255, 255, 0.95)
+  );
+  transform: translateY(-4px);
+  box-shadow: 
+    0 12px 35px rgba(0, 0, 0, 0.2),
+    0 0 30px rgba(255, 94, 125, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.profile-input::placeholder {
+  color: #888;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.check-button {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, 
+    rgba(245, 230, 232, 0.95), 
+    rgba(232, 212, 215, 0.9)
+  );
+  color: #333333;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.15),
+    0 0 20px rgba(255, 94, 125, 0.1);
+  backdrop-filter: blur(15px);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.check-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 94, 125, 0.3), 
+    transparent
+  );
+  transition: left 0.6s ease;
+}
+
+.check-button:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.check-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, 
+    rgba(255, 94, 125, 0.2), 
+    rgba(232, 212, 215, 0.95)
+  );
+  transform: translateY(-4px);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.2),
+    0 0 35px rgba(255, 94, 125, 0.3);
+  color: #FF5E7D;
+}
+
+.check-button:active:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.check-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(135deg, 
+    rgba(200, 200, 200, 0.7), 
+    rgba(180, 180, 180, 0.6)
+  );
+}
+
+@keyframes backgroundFloat {
+  0% { transform: translateX(-10px) translateY(-5px); }
+  100% { transform: translateX(10px) translateY(5px); }
+}
+
+@keyframes titleGlow {
+  0% { 
+    text-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      0 0 25px rgba(255, 255, 255, 0.3);
+  }
+  100% { 
+    text-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      0 0 35px rgba(255, 255, 255, 0.5);
+  }
+}
+
+@keyframes inputGlow {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-logo {
+  top: 15px;
+  left: 15px;
+  padding: 6px 10px;
+  border-radius: 12px;
+}

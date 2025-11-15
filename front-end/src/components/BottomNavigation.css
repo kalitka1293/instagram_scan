@@ -1,0 +1,298 @@
+.bottom-navigation {
+  position: fixed;
+  bottom: 0px;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.25), 
+    rgba(255, 255, 255, 0.15),
+    rgba(248, 226, 230, 0.2)
+  );
+  backdrop-filter: blur(30px);
+  border-radius: 35px 35px 0 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 15px 12px 10px 12px;
+  box-shadow: 
+    0 -15px 50px rgba(0, 0, 0, 0.15),
+    0 -5px 25px rgba(255, 94, 125, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(255, 94, 125, 0.1);
+  z-index: 1000;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom: none;
+  overflow: hidden;
+}
+
+/* Неоновый фон с анимацией */
+.bottom-navigation::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 94, 125, 0.1) 0%,
+    rgba(229, 75, 105, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(229, 75, 105, 0.05) 75%,
+    rgba(255, 94, 125, 0.1) 100%
+  );
+  animation: backgroundShimmer 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Скользящий блик */
+.bottom-navigation::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 75px;
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+  height: fit-content;
+  width: fit-content;
+}
+
+/* Неоновый фон для кнопок */
+.nav-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 25px;
+  background: linear-gradient(135deg, 
+    rgba(255, 94, 125, 0.2), 
+    rgba(255, 94, 125, 0.1),
+    rgba(229, 75, 105, 0.15)
+  );
+  opacity: 0;
+  transition: all 0.4s ease;
+  transform: scale(0.7);
+  z-index: -1;
+}
+
+.nav-item:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.nav-item:hover {
+  color: #FFFFFF;
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 
+    0 15px 35px rgba(255, 94, 125, 0.3),
+    0 5px 15px rgba(255, 94, 125, 0.2),
+    0 0 25px rgba(255, 94, 125, 0.15);
+    height: fit-content;
+    width: fit-content;
+}
+
+.nav-item.active {
+  background: radial-gradient(ellipse at center,
+    rgba(255, 94, 125, 0.25) 0%,
+    rgba(255, 94, 125, 0.15) 50%,
+    rgba(255, 94, 125, 0.05) 100%
+  );
+  color: #FFFFFF;
+  box-shadow: 
+    0 10px 30px rgba(255, 94, 125, 0.4),
+    0 5px 15px rgba(255, 94, 125, 0.3),
+    0 0 40px rgba(255, 94, 125, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 94, 125, 0.3);
+  transform: translateY(-3px);
+  height: fit-content;
+  width: fit-content;
+}
+
+.nav-item.active::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Иконки как картинки */
+.nav-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  transition: all 0.4s ease;
+  filter: 
+    brightness(0) 
+    invert(1) 
+    drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+}
+
+.nav-item:hover .nav-icon {
+  filter: 
+    brightness(0) 
+    invert(1) 
+    drop-shadow(0 0 15px rgba(255, 94, 125, 0.6))
+    drop-shadow(0 0 25px rgba(255, 94, 125, 0.4));
+  transform: scale(1.1);
+}
+
+.nav-item.active .nav-icon {
+  filter: 
+    brightness(0) 
+    invert(1) 
+    drop-shadow(0 0 20px rgba(255, 94, 125, 0.8))
+    drop-shadow(0 0 35px rgba(255, 94, 125, 0.6))
+    drop-shadow(0 0 50px rgba(255, 94, 125, 0.4));
+  transform: scale(1.15);
+}
+
+.nav-label {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.3px;
+  transition: all 0.4s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.nav-item:hover .nav-label {
+  font-weight: 700;
+  color: #FFFFFF;
+  text-shadow: 
+    0 0 10px rgba(255, 94, 125, 0.6),
+    0 0 20px rgba(255, 94, 125, 0.4),
+    0 0 30px rgba(255, 94, 125, 0.2);
+  letter-spacing: 1px;
+}
+
+.nav-item.active .nav-label {
+  font-weight: 800;
+  color: #FFFFFF;
+  text-shadow: 
+    0 0 15px rgba(255, 94, 125, 0.8),
+    0 0 25px rgba(255, 94, 125, 0.6),
+    0 0 35px rgba(255, 94, 125, 0.4);
+  letter-spacing: 1.2px;
+}
+
+/* Неоновый пульсирующий эффект для активной кнопки */
+.nav-item.active {
+  animation: neonPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes neonPulse {
+  0% {
+    box-shadow: 
+      0 10px 30px rgba(255, 94, 125, 0.4),
+      0 5px 15px rgba(255, 94, 125, 0.3),
+      0 0 40px rgba(255, 94, 125, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    box-shadow: 
+      0 15px 40px rgba(255, 94, 125, 0.6),
+      0 8px 20px rgba(255, 94, 125, 0.5),
+      0 0 60px rgba(255, 94, 125, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes backgroundShimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes slideShine {
+  0% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+  .bottom-navigation {
+    padding: 12px 8px 8px 8px;
+    border-radius: 30px 30px 0 0;
+  }
+  
+  .nav-item {
+    padding: 10px 14px;
+    min-width: 65px;
+    gap: 5px;
+  }
+  
+  .nav-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .nav-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  
+  .nav-item:hover .nav-label {
+    letter-spacing: 0.5px;
+  }
+  
+  .nav-item.active .nav-label {
+    letter-spacing: 0.7px;
+  }
+}
+
+@media (max-width: 380px) {
+  .bottom-navigation {
+    padding: 10px 6px 6px 6px;
+  }
+  
+  .nav-item {
+    padding: 8px 10px;
+    min-width: 60px;
+    gap: 4px;
+  }
+  
+  .nav-icon {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .nav-label {
+    font-size: 9px;
+    font-weight: 700;
+  }
+} 

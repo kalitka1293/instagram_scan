@@ -1,0 +1,751 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Все запросы - Админ панель{% endblock %}
+
+{% block page_icon %}fas fa-search{% endblock %}
+
+{% block content %}
+<!-- Поиск и фильтры -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3" id="profileSearchForm">
+                    <div class="col-lg-4">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" name="search" value="{{ search }}" 
+                                   placeholder="Поиск по username..." id="profileSearchInput">
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <select class="form-select" name="status" onchange="this.form.submit()">
+                            <option value="">Все статусы</option>
+                            <option value="completed" {% if status == 'completed' %}selected{% endif %}>Завершено</option>
+                            <option value="processing" {% if status == 'processing' %}selected{% endif %}>В процессе</option>
+                            <option value="pending" {% if status == 'pending' %}selected{% endif %}>Ожидание</option>
+                            <option value="failed" {% if status == 'failed' %}selected{% endif %}>Ошибка</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <select class="form-select" name="page_size" onchange="this.form.submit()">
+                            <option value="20" {% if page_size == 20 %}selected{% endif %}>20 на странице</option>
+                            <option value="30" {% if page_size == 30 %}selected{% endif %}>30 на странице</option>
+                            <option value="50" {% if page_size == 50 %}selected{% endif %}>50 на странице</option>
+                            <option value="100" {% if page_size == 100 %}selected{% endif %}>100 на странице</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <select class="form-select" name="sort" onchange="this.form.submit()">
+                            <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Новые сначала</option>
+                            <option value="followers_desc" {% if sort == 'followers_desc' %}selected{% endif %}>По подписчикам</option>
+                            <option value="success_desc" {% if sort == 'success_desc' %}selected{% endif %}>По успешности</option>
+                            <option value="updated_desc" {% if sort == 'updated_desc' %}selected{% endif %}>По обновлению</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <div class="btn-group w-100">
+                            <button type="submit" class="btn btn-admin">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <a href="/admin/profiles" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-info" onclick="toggleProfileFilters()">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Расширенные фильтры -->
+                <div class="mt-3" id="profileAdvancedFilters" style="display: none;">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Тип профиля:</label>
+                            <select class="form-select" name="profile_type">
+                                <option value="">Все</option>
+                                <option value="verified">Верифицированные</option>
+                                <option value="private">Приватные</option>
+                                <option value="business">Бизнес</option>
+                                <option value="public">Публичные</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Количество подписчиков:</label>
+                            <select class="form-select" name="followers_range">
+                                <option value="">Все</option>
+                                <option value="0-1000">До 1K</option>
+                                <option value="1000-10000">1K - 10K</option>
+                                <option value="10000-100000">10K - 100K</option>
+                                <option value="100000+">100K+</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Успешность парсинга:</label>
+                            <select class="form-select" name="success_rate">
+                                <option value="">Все</option>
+                                <option value="90-100">90-100%</option>
+                                <option value="70-90">70-90%</option>
+                                <option value="50-70">50-70%</option>
+                                <option value="0-50">Менее 50%</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Период создания:</label>
+                            <select class="form-select" name="created_period">
+                                <option value="">Все время</option>
+                                <option value="today">Сегодня</option>
+                                <option value="week">На этой неделе</option>
+                                <option value="month">В этом месяце</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ profiles|length }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Показано</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ profiles|selectattr("profile.parsing_status", "equalto", "completed")|list|length }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Завершено</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ profiles|selectattr("profile.parsing_status", "equalto", "processing")|list|length }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">В процессе</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ profiles|sum(attribute="profile.followers_count") }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Всего подписчиков</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ profiles|sum(attribute="followers_saved") }}</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Сохранено подписчиков</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card metric-card">
+            <div class="card-body text-center p-3">
+                <div class="metric-value" style="font-size: 1.8rem;">{{ "%.1f"|format((profiles|sum(attribute="success_rate") / (profiles|length or 1))) }}%</div>
+                <div class="metric-label" style="font-size: 0.8rem;">Средний успех</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица профилей -->
+<div class="table-container">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-search"></i> Все запросы</h5>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary btn-sm" onclick="exportProfiles()">
+                <i class="fas fa-download"></i> Экспорт
+            </button>
+            <button class="btn btn-outline-success btn-sm" onclick="refreshProfiles()">
+                <i class="fas fa-sync-alt"></i> Обновить
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table mb-0" id="profilesTable">
+            <thead>
+                <tr>
+                    <th width="20%">Профиль</th>
+                    <th width="10%">Подписчики</th>
+                    <th width="10%">Сохранено</th>
+                    <th width="10%">Успех</th>
+                    <th width="15%">Статус</th>
+                    <th width="15%">Дата создания</th>
+                    <th width="10%">Посты</th>
+                    <th width="10%">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile_data in profiles %}
+                <tr data-profile-id="{{ profile_data.profile.id }}" style="cursor: pointer;" 
+                    onclick="showProfileDetails({{ profile_data.profile.id }})">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            {% if profile_data.profile.profile_pic_url %}
+                            <img src="{{ profile_data.profile.profile_pic_url }}" alt="Avatar" 
+                                 class="rounded-circle me-2" width="40" height="40" 
+                                 onerror="this.src='/static/default-avatar.svg'"
+                                 title="URL: {{ profile_data.profile.profile_pic_url }}">
+                            {% else %}
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 40px; height: 40px;"
+                                 title="Нет URL аватара">
+                                <i class="fas fa-user text-muted"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <strong>@{{ profile_data.profile.username }}</strong>
+                                {% if profile_data.profile.is_verified %}
+                                <i class="fas fa-check-circle text-primary" title="Верифицирован"></i>
+                                {% endif %}
+                                {% if profile_data.profile.is_private %}
+                                <i class="fas fa-lock text-warning" title="Приватный"></i>
+                                {% endif %}
+                                <br>
+                                <small class="text-muted">{{ profile_data.profile.full_name or '-' }}</small>
+                                {% if profile_data.profile.profile_pic_url %}
+                                <br><small class="text-info">🖼️ Есть аватар</small>
+                                {% else %}
+                                <br><small class="text-warning">❌ Нет аватара</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <strong>{{ "{:,}".format(profile_data.profile.followers_count or 0) }}</strong>
+                        <br>
+                        <small class="text-muted">{{ "{:,}".format(profile_data.profile.following_count or 0) }} подписок</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary">{{ profile_data.followers_saved }}</span>
+                        {% if profile_data.profile.followers_count %}
+                        <br>
+                        <small class="text-muted">
+                            {{ "%.1f"|format(profile_data.followers_saved / profile_data.profile.followers_count * 100) }}%
+                        </small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar 
+                                {% if profile_data.success_rate >= 80 %}bg-success
+                                {% elif profile_data.success_rate >= 50 %}bg-warning
+                                {% else %}bg-danger{% endif %}" 
+                                style="width: {{ profile_data.success_rate }}%;">
+                                {{ "%.1f"|format(profile_data.success_rate) }}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if profile_data.profile.parsing_status == 'completed' %}
+                        <span class="status-badge status-active">Завершено</span>
+                        {% elif profile_data.profile.parsing_status == 'processing' %}
+                        <span class="status-badge status-pending">В процессе</span>
+                        {% elif profile_data.profile.parsing_status == 'pending' %}
+                        <span class="status-badge status-pending">Ожидание</span>
+                        {% elif profile_data.profile.parsing_status == 'failed' %}
+                        <span class="status-badge status-failed">Ошибка</span>
+                        {% else %}
+                        <span class="status-badge">{{ profile_data.profile.parsing_status }}</span>
+                        {% endif %}
+                        
+                        {% if profile_data.profile.parse_task_id %}
+                        <br><small class="text-muted">Task: {{ profile_data.profile.parse_task_id[:8] }}...</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            {{ profile_data.profile.created_at.strftime('%d.%m.%Y %H:%M') if profile_data.profile.created_at else '-' }}
+                        </small>
+                        {% if profile_data.profile.last_scraped %}
+                        <br>
+                        <small class="text-muted">Обновлен: {{ profile_data.profile.last_scraped.strftime('%d.%m.%Y') }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ profile_data.profile.posts_count or 0 }}</span>
+                        {% if profile_data.profile.comments_data %}
+                        <br><small class="text-success">{{ profile_data.profile.comments_data|length }} комментариев</small>
+                        {% endif %}
+                    </td>
+                    <td onclick="event.stopPropagation();">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="showProfileDetails({{ profile_data.profile.id }})" 
+                                    title="Подробности">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if profile_data.profile.parsing_status in ['failed', 'completed'] %}
+                            <button class="btn btn-outline-warning" onclick="reparseProfile({{ profile_data.profile.id }})" 
+                                    title="Повторный парсинг">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                            {% endif %}
+                            <a class="btn btn-outline-success" href="https://instagram.com/{{ profile_data.profile.username }}" 
+                               target="_blank" title="Открыть в Instagram">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                
+                {% if not profiles %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <i class="fas fa-search fa-3x mb-3 d-block"></i>
+                        Профили не найдены
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Улучшенная пагинация -->
+    {% if total_pages > 1 %}
+    <div class="p-3 border-top bg-light">
+        <div class="row align-items-center">
+            <div class="col-md-5">
+                <div class="d-flex align-items-center">
+                    <span class="text-muted me-3">
+                        Показано {{ ((current_page - 1) * 30 + 1) }}-{{ min(current_page * 30, profiles|length + (current_page - 1) * 30) }} 
+                        из {{ total_pages * 30 }} профилей
+                    </span>
+                    
+                    <!-- Быстрые фильтры -->
+                    <div class="btn-group btn-group-sm ms-3">
+                        <a href="?status=completed" class="btn btn-outline-success btn-sm" title="Завершенные">
+                            <i class="fas fa-check"></i>
+                        </a>
+                        <a href="?status=processing" class="btn btn-outline-warning btn-sm" title="В процессе">
+                            <i class="fas fa-spinner"></i>
+                        </a>
+                        <a href="?status=failed" class="btn btn-outline-danger btn-sm" title="Ошибки">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        <a href="/admin/profiles" class="btn btn-outline-secondary btn-sm" title="Все">
+                            <i class="fas fa-list"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 text-center">
+                <nav>
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        <!-- Первая страница -->
+                        {% if current_page > 3 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{{ '&search=' + search if search }}{{ '&status=' + status if status }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}" title="Первая">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Предыдущая страница -->
+                        {% if current_page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ current_page - 1 }}{{ '&search=' + search if search }}{{ '&status=' + status if status }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Номера страниц -->
+                        {% for page_num in range(max(1, current_page - 2), min(total_pages + 1, current_page + 3)) %}
+                        {% if page_num == current_page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_num }}{{ '&search=' + search if search }}{{ '&status=' + status if status }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}">{{ page_num }}</a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        <!-- Следующая страница -->
+                        {% if current_page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ current_page + 1 }}{{ '&search=' + search if search }}{{ '&status=' + status if status }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Последняя страница -->
+                        {% if current_page < total_pages - 2 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ total_pages }}{{ '&search=' + search if search }}{{ '&status=' + status if status }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}" title="Последняя">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            
+            <div class="col-md-3 text-end">
+                <div class="input-group input-group-sm" style="width: 120px; margin-left: auto;">
+                    <span class="input-group-text">Стр.</span>
+                    <input type="number" class="form-control" min="1" max="{{ total_pages }}" 
+                           value="{{ current_page }}" onchange="goToProfilePage(this.value)">
+                    <span class="input-group-text">из {{ total_pages }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Прогресс загрузки -->
+        <div class="mt-2">
+            <div class="progress" style="height: 3px;">
+                <div class="progress-bar bg-success" style="width: {{ (current_page / total_pages * 100) }}%;"></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно деталей профиля -->
+<div class="modal fade" id="profileDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user"></i> Детали профиля</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="profileDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Показать детали профиля
+    async function showProfileDetails(profileId) {
+        const modal = new bootstrap.Modal(document.getElementById('profileDetailsModal'));
+        modal.show();
+        
+        try {
+            const response = await fetch(`/admin/profiles/${profileId}/details`);
+            const data = await response.json();
+            
+            document.getElementById('profileDetailsContent').innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6><i class="fas fa-user"></i> Информация о профиле</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-3">
+                                    ${data.profile.profile_pic_url ? 
+                                        `<img src="${data.profile.profile_pic_url}" class="rounded-circle" width="80" height="80" onerror="this.src='/static/default-avatar.svg'">` :
+                                        '<div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px;"><i class="fas fa-user fa-2x text-muted"></i></div>'
+                                    }
+                                </div>
+                                <h5 class="text-center">@${data.profile.username}</h5>
+                                <p class="text-center text-muted">${data.profile.full_name || '-'}</p>
+                                
+                                <hr>
+                                
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <strong>${data.profile.posts_count || 0}</strong>
+                                        <br><small>Посты</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>${data.profile.followers_count?.toLocaleString() || 0}</strong>
+                                        <br><small>Подписчики</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>${data.profile.following_count?.toLocaleString() || 0}</strong>
+                                        <br><small>Подписки</small>
+                                    </div>
+                                </div>
+                                
+                                <hr>
+                                
+                                <p><strong>Биография:</strong></p>
+                                <p class="small">${data.profile.biography || 'Не указана'}</p>
+                                
+                                ${data.profile.external_url ? `<p><strong>Ссылка:</strong> <a href="${data.profile.external_url}" target="_blank">${data.profile.external_url}</a></p>` : ''}
+                                
+                                <div class="d-flex gap-2 flex-wrap">
+                                    ${data.profile.is_verified ? '<span class="badge bg-primary">Верифицирован</span>' : ''}
+                                    ${data.profile.is_private ? '<span class="badge bg-warning">Приватный</span>' : ''}
+                                    ${data.profile.is_business ? '<span class="badge bg-info">Бизнес</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6><i class="fas fa-chart-bar"></i> Статистика парсинга</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>Статус:</strong>
+                                    <span class="status-badge ${
+                                        data.profile.parsing_status === 'completed' ? 'status-active' :
+                                        data.profile.parsing_status === 'processing' ? 'status-pending' :
+                                        data.profile.parsing_status === 'failed' ? 'status-failed' : ''
+                                    }">${data.profile.parsing_status}</span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <strong>Подписчиков сохранено:</strong> ${data.followers_count}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <strong>Создан:</strong> ${new Date(data.profile.created_at).toLocaleString('ru')}
+                                </div>
+                                
+                                ${data.profile.last_scraped ? 
+                                    `<div class="mb-3"><strong>Последнее обновление:</strong> ${new Date(data.profile.last_scraped).toLocaleString('ru')}</div>` : ''
+                                }
+                                
+                                ${data.profile.parse_task_id ? 
+                                    `<div class="mb-3"><strong>Task ID:</strong> <code>${data.profile.parse_task_id}</code></div>` : ''
+                                }
+                                
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-success" style="width: ${(data.followers_count / (data.profile.followers_count || 1) * 100)}%"></div>
+                                </div>
+                                <small class="text-muted">Успешность парсинга: ${((data.followers_count / (data.profile.followers_count || 1)) * 100).toFixed(1)}%</small>
+                            </div>
+                        </div>
+                        
+                        ${data.profile.comments_data && data.profile.comments_data.length > 0 ? `
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h6><i class="fas fa-comments"></i> Комментарии (${data.profile.comments_data.length})</h6>
+                            </div>
+                            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                                ${data.profile.comments_data.slice(0, 5).map(comment => `
+                                    <div class="border-bottom pb-2 mb-2">
+                                        <strong>@${comment.username}:</strong>
+                                        <p class="small mb-0">${comment.text}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6><i class="fas fa-users"></i> Взаимные подписчики</h6>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                ${data.mutual_followers && data.mutual_followers.length > 0 ? 
+                                    data.mutual_followers.map(follower => `
+                                        <div class="d-flex align-items-center mb-2">
+                                            ${follower.profile_pic_url ? 
+                                                `<img src="${follower.profile_pic_url}" class="rounded-circle me-2" width="30" height="30" onerror="this.src='/static/default-avatar.svg'">` :
+                                                '<div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;"><i class="fas fa-user text-muted"></i></div>'
+                                            }
+                                            <div>
+                                                <strong>@${follower.username}</strong>
+                                                <br><small class="text-muted">${follower.full_name || ''}</small>
+                                            </div>
+                                        </div>
+                                    `).join('') :
+                                    '<p class="text-muted">Взаимные подписчики не найдены</p>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            document.getElementById('profileDetailsContent').innerHTML = `
+                <div class="text-center text-danger">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <p>Ошибка загрузки деталей профиля</p>
+                </div>
+            `;
+        }
+    }
+
+    // Повторный парсинг
+    async function reparseProfile(profileId) {
+        if (!confirm('Запустить повторный парсинг этого профиля?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/api/profiles/${profileId}/reparse`, {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Парсинг запущен!', 'success');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showNotification('Ошибка: ' + result.message, 'danger');
+            }
+        } catch (error) {
+            showNotification('Ошибка запуска парсинга', 'danger');
+        }
+    }
+
+    // Экспорт профилей
+    function exportProfiles() {
+        window.open('/admin/profiles/export?' + new URLSearchParams(window.location.search), '_blank');
+    }
+
+    // Обновление списка
+    function refreshProfiles() {
+        location.reload();
+    }
+
+    // Функция перехода на конкретную страницу профилей
+    function goToProfilePage(pageNum) {
+        if (pageNum < 1 || pageNum > {{ total_pages }}) {
+            showNotification('Неверный номер страницы', 'warning');
+            return;
+        }
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page', pageNum);
+        window.location.search = urlParams.toString();
+    }
+    
+    // Переключение расширенных фильтров профилей
+    function toggleProfileFilters() {
+        const filters = document.getElementById('profileAdvancedFilters');
+        const button = event.target.closest('button');
+        
+        if (filters.style.display === 'none' || filters.style.display === '') {
+            filters.style.display = 'block';
+            button.innerHTML = '<i class="fas fa-filter-circle-xmark"></i>';
+            button.classList.remove('btn-outline-info');
+            button.classList.add('btn-info');
+        } else {
+            filters.style.display = 'none';
+            button.innerHTML = '<i class="fas fa-filter"></i>';
+            button.classList.remove('btn-info');
+            button.classList.add('btn-outline-info');
+        }
+    }
+    
+    // Живой поиск профилей с задержкой
+    let profileSearchTimeout;
+    document.getElementById('profileSearchInput').addEventListener('input', function() {
+        clearTimeout(profileSearchTimeout);
+        profileSearchTimeout = setTimeout(() => {
+            if (this.value.length >= 2 || this.value.length === 0) {
+                document.getElementById('profileSearchForm').submit();
+            }
+        }, 750);
+    });
+    
+    // Горячие клавиши для навигации профилей
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+        
+        const currentPage = {{ current_page }};
+        const totalPages = {{ total_pages }};
+        
+        // Shift + стрелки для быстрой навигации
+        if (e.shiftKey) {
+            if (e.key === 'ArrowLeft' && currentPage > 1) {
+                goToProfilePage(currentPage - 1);
+            } else if (e.key === 'ArrowRight' && currentPage < totalPages) {
+                goToProfilePage(currentPage + 1);
+            }
+        }
+        
+        // Цифровые клавиши для быстрых фильтров
+        if (e.ctrlKey) {
+            switch(e.key) {
+                case '1':
+                    window.location.href = '?status=completed';
+                    break;
+                case '2':
+                    window.location.href = '?status=processing';
+                    break;
+                case '3':
+                    window.location.href = '?status=failed';
+                    break;
+                case '0':
+                    window.location.href = '/admin/profiles';
+                    break;
+            }
+        }
+    });
+    
+    // Автообновление статусов с улучшенной логикой
+    let lastRefreshTime = Date.now();
+    setInterval(() => {
+        if (autoRefresh) {
+            const processingRows = document.querySelectorAll('tr[data-profile-id]');
+            let hasProcessing = false;
+            
+            processingRows.forEach(row => {
+                if (row.textContent.includes('процессе') || row.textContent.includes('Ожидание')) {
+                    hasProcessing = true;
+                }
+            });
+            
+            // Обновляем только если есть профили в процессе парсинга
+            if (hasProcessing && Date.now() - lastRefreshTime > 15000) {
+                refreshProfiles();
+                lastRefreshTime = Date.now();
+            }
+        }
+    }, 10000);
+    
+    // Функция для предзагрузки следующей страницы (улучшает UX)
+    function preloadNextPage() {
+        const currentPage = {{ current_page }};
+        const totalPages = {{ total_pages }};
+        
+        if (currentPage < totalPages) {
+            const nextPageUrl = '?page=' + (currentPage + 1) + window.location.search.substring(1).replace(/page=\d+/, '');
+            
+            // Создаем невидимый iframe для предзагрузки
+            const preloadFrame = document.createElement('iframe');
+            preloadFrame.style.display = 'none';
+            preloadFrame.src = nextPageUrl;
+            document.body.appendChild(preloadFrame);
+            
+            setTimeout(() => {
+                document.body.removeChild(preloadFrame);
+            }, 5000);
+        }
+    }
+    
+    // Запускаем предзагрузку через 3 секунды после загрузки страницы
+    setTimeout(preloadNextPage, 3000);
+</script>
+{% endblock %}

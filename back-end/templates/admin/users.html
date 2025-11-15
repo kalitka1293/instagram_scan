@@ -1,0 +1,794 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Управление пользователями - Админ панель{% endblock %}
+
+{% block page_icon %}fas fa-users{% endblock %}
+
+{% block content %}
+<!-- Поиск и фильтры -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3" id="searchForm">
+                    <div class="col-lg-5">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" name="search" value="{{ search }}" 
+                                   placeholder="Поиск по User ID..." id="searchInput">
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <select class="form-select" name="page_size" onchange="this.form.submit()">
+                            <option value="25" {% if page_size == 25 %}selected{% endif %}>25 на странице</option>
+                            <option value="50" {% if page_size == 50 %}selected{% endif %}>50 на странице</option>
+                            <option value="100" {% if page_size == 100 %}selected{% endif %}>100 на странице</option>
+                            <option value="250" {% if page_size == 250 %}selected{% endif %}>250 на странице</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <select class="form-select" name="sort" onchange="this.form.submit()">
+                            <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Новые сначала</option>
+                            <option value="created_asc" {% if sort == 'created_asc' %}selected{% endif %}>Старые сначала</option>
+                            <option value="active_desc" {% if sort == 'active_desc' %}selected{% endif %}>Активные сначала</option>
+                            <option value="requests_desc" {% if sort == 'requests_desc' %}selected{% endif %}>По запросам</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="btn-group w-100">
+                            <button type="submit" class="btn btn-admin">
+                                <i class="fas fa-search"></i> Найти
+                            </button>
+                            <a href="/admin/users" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Сбросить
+                            </a>
+                            <button type="button" class="btn btn-outline-info" onclick="toggleAdvancedSearch()">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Расширенные фильтры -->
+                <div class="mt-3" id="advancedFilters" style="display: none;">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Статус подписки:</label>
+                            <select class="form-select" name="subscription_status">
+                                <option value="">Все</option>
+                                <option value="active">Активная</option>
+                                <option value="inactive">Неактивная</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Тип пользователя:</label>
+                            <select class="form-select" name="user_type">
+                                <option value="">Все</option>
+                                <option value="paid">Платные</option>
+                                <option value="free">Бесплатные</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Активность:</label>
+                            <select class="form-select" name="activity">
+                                <option value="">Все</option>
+                                <option value="today">Сегодня</option>
+                                <option value="week">На этой неделе</option>
+                                <option value="month">В этом месяце</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Количество запросов:</label>
+                            <select class="form-select" name="requests_filter">
+                                <option value="">Все</option>
+                                <option value="0">Без запросов</option>
+                                <option value="1-5">1-5 запросов</option>
+                                <option value="6-20">6-20 запросов</option>
+                                <option value="20+">20+ запросов</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ users|length }}</div>
+                <div class="metric-label">Показано пользователей</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ users|selectattr("has_active_subscription")|list|length }}</div>
+                <div class="metric-label">С активной подпиской</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ users|sum(attribute="profiles_count") }}</div>
+                <div class="metric-label">Всего запросов</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <div class="metric-value">{{ (users|sum(attribute="profiles_count") / (users|length or 1))|round(1) }}</div>
+                <div class="metric-label">Среднее на пользователя</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Панель массовых действий -->
+<div class="row mb-3" id="bulkActions" style="display: none;">
+    <div class="col-12">
+        <div class="alert alert-info d-flex align-items-center justify-content-between">
+            <div>
+                <i class="fas fa-check-square me-2"></i>
+                Выбрано пользователей: <strong id="selectedCount">0</strong>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary" onclick="bulkChangeTariff()">
+                    <i class="fas fa-crown"></i> Изменить тариф
+                </button>
+                <button class="btn btn-sm btn-outline-warning" onclick="bulkToggleStatus()">
+                    <i class="fas fa-user-slash"></i> Изменить статус
+                </button>
+                <button class="btn btn-sm btn-outline-success" onclick="bulkExport()">
+                    <i class="fas fa-download"></i> Экспорт выбранных
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="bulkDelete()">
+                    <i class="fas fa-trash"></i> Удалить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица пользователей -->
+<div class="table-container">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-users"></i> Пользователи</h5>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary btn-sm" onclick="exportUsers()">
+                <i class="fas fa-download"></i> Экспорт
+            </button>
+            <button class="btn btn-outline-success btn-sm" onclick="refreshUsers()">
+                <i class="fas fa-sync-alt"></i> Обновить
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table mb-0" id="usersTable">
+            <thead>
+                <tr>
+                    <th width="20%">User ID</th>
+                    <th width="15%">Регистрация</th>
+                    <th width="10%">Запросы</th>
+                    <th width="15%">Подписка</th>
+                    <th width="15%">Последний вход</th>
+                    <th width="10%">Статус</th>
+                    <th width="15%">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user_data in users %}
+                <tr data-user-id="{{ user_data.user.user_id }}">
+                    <td>
+                        <strong>{{ user_data.display_name }}</strong>
+                        {% if user_data.ig_username != user_data.user.user_id %}
+                        <br><small class="text-muted">ID: {{ user_data.user.user_id }}</small>
+                        {% endif %}
+                        {% if user_data.user.is_paid %}
+                        <span class="badge bg-success ms-1">💎 PAID</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            {{ user_data.user.created_at.strftime('%d.%m.%Y') if user_data.user.created_at else '-' }}
+                        </small>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary">{{ user_data.profiles_count }}</span>
+                        {% if user_data.user.remaining_requests is not none and user_data.user.remaining_requests > 0 %}
+                        <br><small class="text-muted">Осталось: {{ user_data.user.remaining_requests }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user_data.has_active_subscription %}
+                        <span class="status-badge status-active">{{ user_data.tariff_name }}</span>
+                        {% if user_data.subscription_end %}
+                        <br><small class="text-muted">до {{ user_data.subscription_end.strftime('%d.%m.%Y') }}</small>
+                        {% endif %}
+                        {% else %}
+                        <span class="status-badge">Без подписки</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user_data.user.last_login %}
+                        <small class="text-muted">{{ user_data.user.last_login.strftime('%d.%m.%Y %H:%M') }}</small>
+                        {% else %}
+                        <small class="text-muted">Никогда</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user_data.user.is_active %}
+                        <span class="status-badge status-active">Активен</span>
+                        {% else %}
+                        <span class="status-badge status-failed">Заблокирован</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editUser('{{ user_data.user.user_id }}')" 
+                                    title="Редактировать">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="changeTariff('{{ user_data.user.user_id }}')" 
+                                    title="Изменить тариф">
+                                <i class="fas fa-crown"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteUser('{{ user_data.user.user_id }}')" 
+                                    title="Удалить">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                
+                {% if not users %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        <i class="fas fa-users fa-3x mb-3 d-block"></i>
+                        Пользователи не найдены
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Пагинация -->
+    {% if total_pages > 1 %}
+    <div class="p-3 border-top bg-light">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <div class="d-flex align-items-center">
+                    <span class="text-muted me-3">
+                        Показано {{ ((current_page - 1) * 50 + 1) }}-{{ min(current_page * 50, users|length + (current_page - 1) * 50) }} 
+                        из примерно {{ total_pages * 50 }} записей
+                    </span>
+                </div>
+            </div>
+            
+            <div class="col-md-4 text-center">
+                <nav>
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        <!-- Первая страница -->
+                        {% if current_page > 3 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{{ '&search=' + search if search }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}" title="Первая страница">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Предыдущая страница -->
+                        {% if current_page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ current_page - 1 }}{{ '&search=' + search if search }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}" title="Предыдущая">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Номера страниц -->
+                        {% for page_num in range(max(1, current_page - 2), min(total_pages + 1, current_page + 3)) %}
+                        {% if page_num == current_page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_num }}{{ '&search=' + search if search }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}">{{ page_num }}</a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        <!-- Следующая страница -->
+                        {% if current_page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ current_page + 1 }}{{ '&search=' + search if search }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}" title="Следующая">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Последняя страница -->
+                        {% if current_page < total_pages - 2 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ total_pages }}{{ '&search=' + search if search }}{{ '&page_size=' + page_size|string }}{{ '&sort=' + sort }}" title="Последняя страница">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            
+            <div class="col-md-4 text-end">
+                <div class="d-flex align-items-center justify-content-end">
+                    <span class="text-muted me-2">Перейти на:</span>
+                    <input type="number" class="form-control form-control-sm" style="width: 70px;" 
+                           min="1" max="{{ total_pages }}" value="{{ current_page }}" 
+                           onchange="goToPage(this.value)" placeholder="№">
+                    <span class="text-muted ms-2">из {{ total_pages }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно смены тарифа -->
+<div class="modal fade" id="changeTariffModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-crown"></i> Изменить тариф</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="changeTariffForm">
+                <div class="modal-body">
+                    <input type="hidden" id="changeTariffUserId">
+                    <div class="mb-3">
+                        <label class="form-label">Выберите тариф:</label>
+                        <select class="form-select" id="newTariffId" required>
+                            <option value="">Без подписки</option>
+                            <!-- Опции будут загружены через AJAX -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-admin">Изменить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования пользователя -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-edit"></i> Редактировать пользователя</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editUserForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editUserId">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">User ID</label>
+                                <input type="text" class="form-control" id="editUserIdDisplay" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Статус</label>
+                                <select class="form-select" id="editUserActive" required>
+                                    <option value="true">Активен</option>
+                                    <option value="false">Заблокирован</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Тариф</label>
+                                <select class="form-select" id="editUserTariff">
+                                    <option value="">Без подписки</option>
+                                    <!-- Опции будут загружены через AJAX -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Оставшиеся запросы</label>
+                                <input type="number" class="form-control" id="editUserRequests" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Дата начала подписки</label>
+                                <input type="datetime-local" class="form-control" id="editUserSubStart">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Дата окончания подписки</label>
+                                <input type="datetime-local" class="form-control" id="editUserSubEnd">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editUserPaid">
+                            <label class="form-check-label" for="editUserPaid">
+                                Платный пользователь
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Изменения будут сохранены немедленно. Будьте осторожны при редактировании активных подписок.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-admin">Сохранить изменения</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Загрузка списка тарифов для модального окна
+    async function loadTariffs() {
+        try {
+            const response = await fetch('/api/tariffs');
+            const tariffs = await response.json();
+            
+            const select = document.getElementById('newTariffId');
+            tariffs.forEach(tariff => {
+                const option = document.createElement('option');
+                option.value = tariff.id;
+                option.textContent = `${tariff.name} (₽${tariff.price})`;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки тарифов:', error);
+        }
+    }
+
+    // Изменение тарифа
+    function changeTariff(userId) {
+        document.getElementById('changeTariffUserId').value = userId;
+        new bootstrap.Modal(document.getElementById('changeTariffModal')).show();
+    }
+
+    // Обработка формы смены тарифа
+    document.getElementById('changeTariffForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const userId = document.getElementById('changeTariffUserId').value;
+        const tariffId = document.getElementById('newTariffId').value;
+        
+        try {
+            const formData = new FormData();
+            formData.append('tariff_id', tariffId);
+            
+            const response = await fetch(`/admin/users/${userId}/tariff`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Тариф обновлен!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('changeTariffModal')).hide();
+                location.reload();
+            } else {
+                showNotification('Ошибка: ' + result.message, 'danger');
+            }
+        } catch (error) {
+            showNotification('Ошибка изменения тарифа', 'danger');
+        }
+    });
+
+    // Удаление пользователя
+    async function deleteUser(userId) {
+        if (!confirm(`Вы уверены, что хотите удалить пользователя ${userId}? Это действие нельзя отменить.`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/users/${userId}/delete`, {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Пользователь удален!', 'success');
+                document.querySelector(`tr[data-user-id="${userId}"]`).remove();
+            } else {
+                showNotification('Ошибка: ' + result.message, 'danger');
+            }
+        } catch (error) {
+            showNotification('Ошибка удаления пользователя', 'danger');
+        }
+    }
+
+    // Редактирование пользователя
+    async function editUser(userId) {
+        try {
+            // Находим строку пользователя в таблице
+            const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+            const cells = row.querySelectorAll('td');
+            
+            // Заполняем форму данными из таблицы
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserIdDisplay').value = userId;
+            
+            // Получаем полные данные пользователя
+            const response = await fetch(`/admin/users/${userId}/details`);
+            if (response.ok) {
+                const userData = await response.json();
+                
+                document.getElementById('editUserActive').value = userData.is_active ? 'true' : 'false';
+                document.getElementById('editUserTariff').value = userData.current_tariff_id || '';
+                document.getElementById('editUserRequests').value = userData.remaining_requests || 0;
+                document.getElementById('editUserPaid').checked = userData.is_paid || false;
+                
+                // Форматируем даты для datetime-local
+                if (userData.subscription_start) {
+                    document.getElementById('editUserSubStart').value = formatDateTimeLocal(userData.subscription_start);
+                }
+                if (userData.subscription_end) {
+                    document.getElementById('editUserSubEnd').value = formatDateTimeLocal(userData.subscription_end);
+                }
+            }
+            
+            new bootstrap.Modal(document.getElementById('editUserModal')).show();
+        } catch (error) {
+            console.error('Ошибка загрузки данных пользователя:', error);
+            showNotification('Ошибка загрузки данных пользователя', 'danger');
+        }
+    }
+    
+    // Обработка формы редактирования пользователя
+    document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const userId = document.getElementById('editUserId').value;
+        const formData = {
+            is_active: document.getElementById('editUserActive').value === 'true',
+            current_tariff_id: document.getElementById('editUserTariff').value || null,
+            remaining_requests: parseInt(document.getElementById('editUserRequests').value) || 0,
+            is_paid: document.getElementById('editUserPaid').checked,
+            subscription_start: document.getElementById('editUserSubStart').value || null,
+            subscription_end: document.getElementById('editUserSubEnd').value || null
+        };
+        
+        try {
+            const response = await fetch(`/admin/users/${userId}/edit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Данные пользователя обновлены!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+                location.reload();
+            } else {
+                showNotification('Ошибка: ' + result.message, 'danger');
+            }
+        } catch (error) {
+            showNotification('Ошибка обновления данных пользователя', 'danger');
+        }
+    });
+    
+    // Форматирование даты для datetime-local input
+    function formatDateTimeLocal(dateString) {
+        const date = new Date(dateString);
+        return date.toISOString().slice(0, 16);
+    }
+
+    // Экспорт пользователей
+    function exportUsers() {
+        window.open('/admin/users/export?' + new URLSearchParams(window.location.search), '_blank');
+    }
+
+    // Обновление списка
+    function refreshUsers() {
+        location.reload();
+    }
+
+    // Функция перехода на конкретную страницу
+    function goToPage(pageNum) {
+        if (pageNum < 1 || pageNum > {{ total_pages }}) {
+            showNotification('Неверный номер страницы', 'warning');
+            return;
+        }
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('page', pageNum);
+        window.location.search = urlParams.toString();
+    }
+    
+    // Переключение расширенных фильтров
+    function toggleAdvancedSearch() {
+        const filters = document.getElementById('advancedFilters');
+        const button = event.target.closest('button');
+        
+        if (filters.style.display === 'none' || filters.style.display === '') {
+            filters.style.display = 'block';
+            button.innerHTML = '<i class="fas fa-filter-circle-xmark"></i>';
+            button.classList.remove('btn-outline-info');
+            button.classList.add('btn-info');
+        } else {
+            filters.style.display = 'none';
+            button.innerHTML = '<i class="fas fa-filter"></i>';
+            button.classList.remove('btn-info');
+            button.classList.add('btn-outline-info');
+        }
+    }
+    
+    // Живой поиск с задержкой
+    let searchTimeout;
+    document.getElementById('searchInput').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 3 || this.value.length === 0) {
+                document.getElementById('searchForm').submit();
+            }
+        }, 500);
+    });
+    
+    // Горячие клавиши для пагинации
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+            return; // Не обрабатываем если в поле ввода
+        }
+        
+        const currentPage = {{ current_page }};
+        const totalPages = {{ total_pages }};
+        
+        if (e.key === 'ArrowLeft' && currentPage > 1) {
+            goToPage(currentPage - 1);
+        } else if (e.key === 'ArrowRight' && currentPage < totalPages) {
+            goToPage(currentPage + 1);
+        } else if (e.key === 'Home') {
+            goToPage(1);
+        } else if (e.key === 'End') {
+            goToPage(totalPages);
+        }
+    });
+    
+    // Массовые действия
+    function selectAllUsers() {
+        const checkboxes = document.querySelectorAll('input[name="selected_users[]"]');
+        const selectAll = document.getElementById('selectAllUsers');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAll.checked;
+        });
+        
+        updateBulkActions();
+    }
+    
+    function updateBulkActions() {
+        const checked = document.querySelectorAll('input[name="selected_users[]"]:checked');
+        const bulkActions = document.getElementById('bulkActions');
+        
+        if (checked.length > 0) {
+            bulkActions.style.display = 'block';
+            document.getElementById('selectedCount').textContent = checked.length;
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+    
+    // Загружаем тарифы при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTariffs();
+        
+        // Добавляем чекбоксы для массовых действий если их еще нет
+        if (!document.querySelector('input[name="selected_users[]"]')) {
+            addBulkSelectionCheckboxes();
+        }
+    });
+    
+    // Добавление чекбоксов для массового выбора
+    function addBulkSelectionCheckboxes() {
+        // Добавляем чекбокс "выбрать все" в заголовок
+        const headerRow = document.querySelector('#usersTable thead tr');
+        if (headerRow && !headerRow.querySelector('input[type="checkbox"]')) {
+            const th = document.createElement('th');
+            th.width = '5%';
+            th.innerHTML = '<input type="checkbox" id="selectAllUsers" onchange="selectAllUsers()">';
+            headerRow.insertBefore(th, headerRow.firstChild);
+        }
+        
+        // Добавляем чекбоксы в каждую строку
+        const rows = document.querySelectorAll('#usersTable tbody tr[data-user-id]');
+        rows.forEach(row => {
+            if (!row.querySelector('input[type="checkbox"]')) {
+                const td = document.createElement('td');
+                const userId = row.getAttribute('data-user-id');
+                td.innerHTML = `<input type="checkbox" name="selected_users[]" value="${userId}" onchange="updateBulkActions()">`;
+                row.insertBefore(td, row.firstChild);
+            }
+        });
+    }
+    
+    // Массовые действия
+    function bulkChangeTariff() {
+        const selected = Array.from(document.querySelectorAll('input[name="selected_users[]"]:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+            showNotification('Выберите пользователей', 'warning');
+            return;
+        }
+        showNotification(`Изменение тарифа для ${selected.length} пользователей - в разработке`, 'info');
+    }
+    
+    function bulkToggleStatus() {
+        const selected = Array.from(document.querySelectorAll('input[name="selected_users[]"]:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+            showNotification('Выберите пользователей', 'warning');
+            return;
+        }
+        showNotification(`Изменение статуса для ${selected.length} пользователей - в разработке`, 'info');
+    }
+    
+    function bulkExport() {
+        const selected = Array.from(document.querySelectorAll('input[name="selected_users[]"]:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+            showNotification('Выберите пользователей', 'warning');
+            return;
+        }
+        
+        const params = new URLSearchParams();
+        selected.forEach(userId => params.append('user_ids', userId));
+        window.open('/admin/users/export?' + params.toString(), '_blank');
+    }
+    
+    function bulkDelete() {
+        const selected = Array.from(document.querySelectorAll('input[name="selected_users[]"]:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+            showNotification('Выберите пользователей', 'warning');
+            return;
+        }
+        
+        if (!confirm(`Вы уверены, что хотите удалить ${selected.length} пользователей? Это действие нельзя отменить.`)) {
+            return;
+        }
+        
+        showNotification(`Удаление ${selected.length} пользователей - в разработке`, 'info');
+    }
+</script>
+{% endblock %}
