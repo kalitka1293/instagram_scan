@@ -248,21 +248,6 @@ def get_db():
     finally:
         db.close()
 
-from asyncRequests.ProxyManager import proxy_manager
-
-
-
-@app.get('/test_my_proxy')
-async def test_proxy_my():
-    log2.debug('sdf32f')
-    print('endpoint test_my_proxy')
-
-    data = {'lol': proxy_manager.get_proxy_resource()}
-    data.update(proxy_manager.get_stats())
-
-
-    return data
-
 
 @app.get("/")
 async def root():
