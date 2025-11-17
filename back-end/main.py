@@ -19,7 +19,7 @@ from database import SessionLocal, engine, init_db
 from instagram_parser_v2 import scrape_profile_basic, generate_user_activities, InstagramParserV2
 from admin import admin_router
 
-from main_profile_check import async_work_parsing
+from main_profile_check import async_work_parsing, work_chekc
 from asyncRequests.AsyncRequestAPI import ResilientAPIClient
 
 # Настройки кэширования
@@ -29,25 +29,6 @@ PROFILE_CACHE_HOURS = 24  # Время жизни кэша профиля
 models.Base.metadata.create_all(bind=engine)
 
 api_client: ResilientAPIClient
-
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     # Startup
-#     global api_client
-#     api_client = ResilientAPIClient(
-#         max_concurrent=10,
-#         request_timeout=25
-#     )
-#
-#     yield
-#
-#     # Shutdown
-#     if api_client:
-#         await api_client.close()
-#
-# # Dependency для внедрения клиента в эндпоинты
-# async def get_api_client():
-#     return api_client
 
 app = FastAPI(
     title="InstardingBot API",
@@ -190,8 +171,6 @@ async def startup_event():
     
     # Запускаем воркер парсинга
     try:
-        from instagram_parser_v2 import start_worker
-        start_worker()
         print("✅ Instagram parser worker started")
     except Exception as e:
         print(f"⚠️ Instagram parser warning: {e}")
@@ -294,6 +273,10 @@ async def get_user_info(user_id: str, db: Session = Depends(get_db)):
     return schemas.User.model_validate(user)
 
 # ===== INSTAGRAM PROFILE ENDPOINTS =====
+@app.get('/check/date')
+async def check__w():
+    await work_chekc()
+    return 200
 
 @app.post("/api/profile/check", response_model=schemas.ProfileCheckResponse)
 async def check_profile(request: schemas.ProfileCheckRequest, db: Session = Depends(get_db)):

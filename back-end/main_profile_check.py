@@ -10,6 +10,13 @@ from image_storage import batch_save_images
 Основная часть работы по парсингу данных
 """
 
+async def work_chekc():
+    parse = get_parser()
+    res = await parse._request(
+        method='GET',
+        url='https://i.instagram.com/api/v1/friendships/12371193944/followers/'
+    )
+    print(res)
 async def async_work_parsing(username: str, user_id):
     db = SessionLocal()
 
