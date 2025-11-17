@@ -15,7 +15,7 @@ async def work_chekc():
     res = await parse._request(
         method='GET',
         url='https://i.instagram.com/api/v1/users/web_profile_info/?username=my_love',
-        user_agent="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.3",
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6133.0 Safari/537.36",
         cookie="ps_n=1;datr=NqnnaArbYN7bMKK2WUPS8se8;ds_user_id=77450811092;csrftoken=ZlRiur13Xevb1kMnqweGa4lrp4SSw7GZ;ig_did=E57A71EB-5533-4010-AFE7-37E459D69366;ps_l=1;wd=982x738;mid=aOepNgALAAGM4mOg92cb6VRJlc6U;sessionid=77450811092%3AzUDe0lxwi2MWMG%3A26%3AAYjZAVhY9xXKaUMxqiZDf_HuPn-GEBkgKerZebyCGw;dpr=1.25;rur=\"CLN\\05477450811092\\0541791699125:01feaa0fea7633655377d62a571d225ed648e8a0ca6d9f2799a8ed0fef053fec9bef79c8\"",
 
 
