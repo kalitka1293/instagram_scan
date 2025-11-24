@@ -7,9 +7,9 @@ interface BottomNavigationProps {
 
 const BottomNavigation = ({ currentScreen, onScreenChange }: BottomNavigationProps) => {
   const navItems = [
-    { id: 'profile-check', icon: '/Профиль.png', label: 'Проверить' },
-    { id: 'pricing', icon: '/Тарифы.png', label: 'Тарифы' },
-    { id: 'info', icon: '/Инфо.png', label: 'Инфо' },
+    { id: 'profile-check', icon: '/profile.png', label: 'Проверить' },
+    { id: 'pricing', icon: '/pricing.png', label: 'Тарифы' },
+    { id: 'info', icon: '/info.png', label: 'Инфо' },
   ]
 
   return (
