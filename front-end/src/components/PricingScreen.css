@@ -290,7 +290,7 @@
 
 .subscribe-btn {
   position: fixed;
-  bottom: 126px; /* Выше над navigation bar */
+  bottom: 85px; /* Выше над navigation bar */
   left: 15%; /* 10% отступ с каждой стороны */
   right: 15%;
   z-index: 999;
