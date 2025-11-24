@@ -2,8 +2,8 @@
  * API утилиты для работы с бэкендом InstardingBot
  */
 //https://truck-tma.ru/
-const API_BASE_URL =  'http://127.0.0.1:8008';
-// const API_BASE_URL =  'https://insta.truck-tma.ru';
+//const API_BASE_URL =  'http://127.0.0.1:8008';
+const API_BASE_URL =  'https://insta.truck-tma.ru';
 
 // Функция для получения прокси URL изображения
 export const getProxyImageUrl = (url: string): string => {
